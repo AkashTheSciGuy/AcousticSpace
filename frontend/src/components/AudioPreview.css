@@ -1,0 +1,25 @@
+.audio-preview {
+  margin-top: 16px;
+  padding: 15px;
+  border: 1px solid #34577a;
+  border-radius: 10px;
+  background: #111c2c;
+}
+
+.audio-preview-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.audio-preview-heading strong { font-size: 13px; }
+.audio-preview-heading span { color: #99adc8; font-size: 11px; }
+
+.audio-preview-player {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}

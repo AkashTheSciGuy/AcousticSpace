@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent } from 'react'
+import AudioPreview from './AudioPreview'
 
 // Temporary UI constraints: confirm formats and limits with the backend owner.
 const SUPPORTED_EXTENSIONS = ['wav', 'mp3'] as const
@@ -96,18 +97,21 @@ export default function AudioUpload() {
       {error && <p className="validation-error" role="alert">{error}</p>}
 
       {selectedFile && (
-        <div className="selected-file" role="status" aria-live="polite">
-          <div className="file-details">
-            <span className="file-type" aria-hidden="true">AUDIO</span>
-            <div>
-              <strong>{selectedFile.name}</strong>
-              <span>{formatFileSize(selectedFile.size)} · Ready for future API integration</span>
+        <>
+          <div className="selected-file" role="status" aria-live="polite">
+            <div className="file-details">
+              <span className="file-type" aria-hidden="true">AUDIO</span>
+              <div>
+                <strong>{selectedFile.name}</strong>
+                <span>{formatFileSize(selectedFile.size)} · Ready for future API integration</span>
+              </div>
             </div>
+            <button className="text-button" type="button" onClick={clearSelection}>
+              Remove
+            </button>
           </div>
-          <button className="text-button" type="button" onClick={clearSelection}>
-            Remove
-          </button>
-        </div>
+          <AudioPreview file={selectedFile} />
+        </>
       )}
 
       <div className="upload-footer">
