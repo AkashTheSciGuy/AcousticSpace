@@ -2,11 +2,15 @@
 
 from fastapi import FastAPI
 
+from app.audio_validation import router as audio_router
+
 app = FastAPI(
     title="AcousticSpace API",
     description="Backend API for AcousticSpace audio deepfake detection",
     version="0.1.0",
 )
+
+app.include_router(audio_router)
 
 
 @app.get("/")
