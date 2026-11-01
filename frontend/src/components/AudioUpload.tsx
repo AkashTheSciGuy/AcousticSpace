@@ -1,10 +1,16 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent } from 'react'
 import AudioPreview from './AudioPreview'
+import { validateAudio, validationMode } from '../services/audioApi'
+import type { AudioValidationResult } from '../services/audioApi'
+import './AudioUpload.css'
 
-// Temporary UI constraints: confirm formats and limits with the backend owner.
+// Current prototype limits; the server validates the content again in live mode.
 const SUPPORTED_EXTENSIONS = ['wav', 'mp3'] as const
 const MAX_FILE_BYTES = 20 * 1024 * 1024
+const REQUEST_TIMEOUT_MS = 15_000
+
+type ValidationState = 'idle' | 'validating' | 'success' | 'error'
 
 function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
@@ -12,39 +18,49 @@ function formatFileSize(bytes: number): string {
 
 export default function AudioUpload() {
   const inputRef = useRef<HTMLInputElement>(null)
+  const requestRef = useRef<AbortController | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [fileError, setFileError] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [validationState, setValidationState] = useState<ValidationState>('idle')
+  const [validationError, setValidationError] = useState<string | null>(null)
+  const [validationResult, setValidationResult] = useState<AudioValidationResult | null>(null)
+
+  useEffect(() => () => requestRef.current?.abort(), [])
+
+  function resetValidation(): void {
+    requestRef.current?.abort()
+    requestRef.current = null
+    setValidationState('idle')
+    setValidationError(null)
+    setValidationResult(null)
+  }
 
   function validateAndSelect(file: File): void {
+    resetValidation()
     const extension = file.name.split('.').pop()?.toLowerCase()
-
     if (!extension || !SUPPORTED_EXTENSIONS.some((value) => value === extension)) {
-      setError('Unsupported format. For this prototype, select a WAV or MP3 file.')
+      setFileError('Unsupported format. Select a WAV or MP3 file.')
       setSelectedFile(null)
       return
     }
-
     if (file.size === 0) {
-      setError('This file is empty. Select a recording that contains audio data.')
+      setFileError('This file is empty. Select a recording that contains audio.')
       setSelectedFile(null)
       return
     }
-
     if (file.size > MAX_FILE_BYTES) {
-      setError('The selected file exceeds the current 20 MB prototype limit.')
+      setFileError('The selected file exceeds the 20 MiB limit.')
       setSelectedFile(null)
       return
     }
-
     setSelectedFile(file)
-    setError(null)
+    setFileError(null)
   }
 
   function handleInputChange(event: ChangeEvent<HTMLInputElement>): void {
     const file = event.target.files?.[0]
     if (file) validateAndSelect(file)
-    // Enables selecting the same file again after clearing an error.
     event.target.value = ''
   }
 
@@ -56,8 +72,42 @@ export default function AudioUpload() {
   }
 
   function clearSelection(): void {
+    resetValidation()
     setSelectedFile(null)
-    setError(null)
+    setFileError(null)
+  }
+
+  async function handleValidate(): Promise<void> {
+    if (!selectedFile || validationState === 'validating') return
+
+    const controller = new AbortController()
+    requestRef.current = controller
+    let timedOut = false
+    const timeout = window.setTimeout(() => {
+      timedOut = true
+      controller.abort()
+    }, REQUEST_TIMEOUT_MS)
+    setValidationState('validating')
+    setValidationResult(null)
+    setValidationError(null)
+
+    try {
+      const result = await validateAudio(selectedFile, controller.signal)
+      if (requestRef.current !== controller) return
+      setValidationResult(result)
+      setValidationState('success')
+    } catch (error) {
+      if (requestRef.current !== controller) return
+      if (controller.signal.aborted && !timedOut) return
+      setValidationError(
+        timedOut ? 'The request timed out. Please try again.'
+          : error instanceof Error ? error.message : 'Audio validation failed.',
+      )
+      setValidationState('error')
+    } finally {
+      window.clearTimeout(timeout)
+      if (requestRef.current === controller) requestRef.current = null
+    }
   }
 
   return (
@@ -66,9 +116,9 @@ export default function AudioUpload() {
         <div>
           <span className="section-label">STEP 01</span>
           <h2 id="upload-title">Select an audio recording</h2>
-          <p>Files are validated locally for now. No audio is uploaded to a server.</p>
+          <p>Choose a recording, inspect its waveform, then validate the upload.</p>
         </div>
-        <span className="local-badge">LOCAL ONLY</span>
+        <span className="local-badge">{validationMode === 'mock' ? 'MOCK API' : 'LIVE API'}</span>
       </div>
 
       <div
@@ -91,35 +141,56 @@ export default function AudioUpload() {
           className="visually-hidden"
           aria-label="Choose a WAV or MP3 audio file"
         />
-        <small>Prototype formats: WAV, MP3 · Maximum: 20 MB</small>
+        <small>WAV or MP3 · Maximum 20 MiB</small>
       </div>
 
-      {error && <p className="validation-error" role="alert">{error}</p>}
+      {fileError && <p className="validation-error" role="alert">{fileError}</p>}
 
       {selectedFile && (
         <>
-          <div className="selected-file" role="status" aria-live="polite">
+          <div className="selected-file" role="status">
             <div className="file-details">
               <span className="file-type" aria-hidden="true">AUDIO</span>
               <div>
                 <strong>{selectedFile.name}</strong>
-                <span>{formatFileSize(selectedFile.size)} · Ready for future API integration</span>
+                <span>{formatFileSize(selectedFile.size)} · Ready to validate</span>
               </div>
             </div>
-            <button className="text-button" type="button" onClick={clearSelection}>
-              Remove
-            </button>
+            <button className="text-button" type="button" onClick={clearSelection}>Remove</button>
           </div>
           <AudioPreview file={selectedFile} />
         </>
       )}
 
       <div className="upload-footer">
-        <span>Backend analysis is not connected yet.</span>
-        <button className="disabled-button" type="button" disabled title="API integration is a later milestone">
-          Analyze audio (coming soon)
+        <span>{validationMode === 'mock'
+          ? 'Demo mode: no file is sent to a server.'
+          : 'Live mode: sends the selected file to FastAPI for validation.'}</span>
+        <button
+          className="validation-action-button"
+          type="button"
+          disabled={!selectedFile || validationState === 'validating'}
+          onClick={() => { void handleValidate() }}
+        >
+          {validationState === 'validating' ? 'Validating…'
+            : validationState === 'error' ? 'Retry validation' : 'Validate recording'}
         </button>
       </div>
+
+      {validationState === 'validating' && (
+        <p className="validation-progress" role="status">Checking recording…</p>
+      )}
+      {validationState === 'error' && validationError && (
+        <p className="validation-error" role="alert">{validationError}</p>
+      )}
+      {validationState === 'success' && validationResult && (
+        <div className="validation-success" role="status">
+          <strong>File validation successful {validationMode === 'mock' ? '(simulated)' : ''}</strong>
+          <span>{validationResult.filename} · {validationResult.format.toUpperCase()} · {formatFileSize(validationResult.size_bytes)}</span>
+          <p>{validationResult.message}</p>
+          <small>This is NOT a deepfake-detection result.</small>
+        </div>
+      )}
     </section>
   )
 }

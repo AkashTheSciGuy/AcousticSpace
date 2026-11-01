@@ -1,0 +1,27 @@
+.validation-action-button {
+  padding: 11px 15px;
+  border: 0;
+  border-radius: 9px;
+  background: #7695ff;
+  color: #07101f;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.validation-action-button:hover:not(:disabled) { background: #94adff; }
+.validation-action-button:disabled { opacity: .5; cursor: not-allowed; }
+.validation-progress { margin: 16px 0 0; color: #a8c1ff; font-size: 12px; }
+.validation-success {
+  display: grid;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 15px;
+  border: 1px solid #357b71;
+  border-radius: 10px;
+  background: #142e2d;
+  color: #bdece2;
+  font-size: 12px;
+}
+.validation-success span { overflow-wrap: anywhere; }
+.validation-success p { margin: 0; color: #c4dedb; }
+.validation-success small { color: #91b9b4; }
