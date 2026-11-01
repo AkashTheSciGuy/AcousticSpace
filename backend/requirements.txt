@@ -1,3 +1,4 @@
 fastapi
 uvicorn[standard]
 python-multipart>=0.0.20,<1
+librosa>=1.0,<2
