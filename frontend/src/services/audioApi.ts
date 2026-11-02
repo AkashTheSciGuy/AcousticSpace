@@ -7,7 +7,8 @@ export type AudioValidationResult = {
   message: string
 }
 
-const MOCK_MODE = import.meta.env.VITE_AUDIO_API_MODE !== 'live'
+// Real FastAPI validation is the default. Set VITE_AUDIO_API_MODE=mock for offline demos.
+const MOCK_MODE = import.meta.env.VITE_AUDIO_API_MODE === 'mock'
 
 export const validationMode: 'mock' | 'live' = MOCK_MODE ? 'mock' : 'live'
 
@@ -66,7 +67,6 @@ export async function validateAudio(file: File, signal: AbortSignal): Promise<Au
 
   let response: Response
   try {
-    // Vite's development proxy forwards /api to the local FastAPI service.
     response = await fetch('/api/audio/validate', { method: 'POST', body, signal })
   } catch (cause) {
     if (signal.aborted) throw cause
