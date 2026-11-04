@@ -25,3 +25,8 @@
 .validation-success span { overflow-wrap: anywhere; }
 .validation-success p { margin: 0; color: #c4dedb; }
 .validation-success small { color: #91b9b4; }
+
+.audio-feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(125px, 1fr)); gap: 10px; margin: 12px 0; }
+.audio-feature-grid > div { display: flex; flex-direction: column; gap: 5px; padding: 11px; border-radius: 8px; background: #102524; border: 1px solid #32605d; }
+.audio-feature-grid span { font-size: 10px; color: #aac8c3; }
+.audio-feature-grid strong { font-size: 13px; color: #e0fff4; }

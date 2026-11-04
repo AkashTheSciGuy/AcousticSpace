@@ -1,10 +1,17 @@
-/** Validation-only service. No deepfake classification is performed here. */
+/** Audio inspection returns real signal measurements, never an authenticity prediction. */
 export type AudioValidationResult = {
   status: 'valid'
   filename: string
   format: 'wav' | 'mp3'
   size_bytes: number
   message: string
+  features?: {
+    duration_seconds: number
+    sample_rate: number
+    rms_amplitude: number
+    zero_crossing_rate: number
+    spectral_centroid_hz: number
+  }
 }
 
 // Real FastAPI validation is the default. Set VITE_AUDIO_API_MODE=mock for offline demos.
@@ -28,7 +35,14 @@ function isValidationResult(value: unknown): value is AudioValidationResult {
     (item.format === 'wav' || item.format === 'mp3') &&
     typeof item.size_bytes === 'number' &&
     Number.isFinite(item.size_bytes) &&
-    typeof item.message === 'string'
+    typeof item.message === 'string' &&
+    (item.features === undefined || (
+      typeof item.features === 'object' && item.features !== null &&
+      ['duration_seconds', 'sample_rate', 'rms_amplitude', 'zero_crossing_rate', 'spectral_centroid_hz'].every(
+        (key) => typeof (item.features as Record<string, unknown>)[key] === 'number' &&
+          Number.isFinite((item.features as Record<string, number>)[key]),
+      )
+    ))
   )
 }
 
@@ -67,7 +81,7 @@ export async function validateAudio(file: File, signal: AbortSignal): Promise<Au
 
   let response: Response
   try {
-    response = await fetch('/api/audio/validate', { method: 'POST', body, signal })
+    response = await fetch('/api/audio/inspect', { method: 'POST', body, signal })
   } catch (cause) {
     if (signal.aborted) throw cause
     throw new AudioApiError('Could not reach the backend. Check that FastAPI is running.')

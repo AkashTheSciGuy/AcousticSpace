@@ -116,7 +116,7 @@ export default function AudioUpload() {
         <div>
           <span className="section-label">STEP 01</span>
           <h2 id="upload-title">Select an audio recording</h2>
-          <p>Choose a recording, inspect its waveform, then validate the upload.</p>
+          <p>Choose a recording, inspect its waveform, then inspect its signal characteristics.</p>
         </div>
         <span className="local-badge">{validationMode === 'mock' ? 'MOCK API' : 'LIVE API'}</span>
       </div>
@@ -165,30 +165,39 @@ export default function AudioUpload() {
       <div className="upload-footer">
         <span>{validationMode === 'mock'
           ? 'Demo mode: no file is sent to a server.'
-          : 'Live mode: sends the selected file to FastAPI for validation.'}</span>
+          : 'Live mode: FastAPI measures audio features; it does not detect deepfakes.'}</span>
         <button
           className="validation-action-button"
           type="button"
           disabled={!selectedFile || validationState === 'validating'}
           onClick={() => { void handleValidate() }}
         >
-          {validationState === 'validating' ? 'Validating…'
-            : validationState === 'error' ? 'Retry validation' : 'Validate recording'}
+          {validationState === 'validating' ? 'Inspecting…'
+            : validationState === 'error' ? 'Retry inspection' : 'Inspect recording'}
         </button>
       </div>
 
       {validationState === 'validating' && (
-        <p className="validation-progress" role="status">Checking recording…</p>
+        <p className="validation-progress" role="status">Inspecting recording…</p>
       )}
       {validationState === 'error' && validationError && (
         <p className="validation-error" role="alert">{validationError}</p>
       )}
       {validationState === 'success' && validationResult && (
         <div className="validation-success" role="status">
-          <strong>File validation successful {validationMode === 'mock' ? '(simulated)' : ''}</strong>
+          <strong>Audio inspection {validationMode === 'mock' ? '(simulated)' : 'complete'}</strong>
           <span>{validationResult.filename} · {validationResult.format.toUpperCase()} · {formatFileSize(validationResult.size_bytes)}</span>
           <p>{validationResult.message}</p>
-          <small>This is NOT a deepfake-detection result.</small>
+          {validationResult.features && (
+            <div className="audio-feature-grid" aria-label="Measured audio features">
+              <div><span>Duration</span><strong>{validationResult.features.duration_seconds.toFixed(2)} s</strong></div>
+              <div><span>Sample rate</span><strong>{validationResult.features.sample_rate.toLocaleString()} Hz</strong></div>
+              <div><span>RMS amplitude</span><strong>{validationResult.features.rms_amplitude.toFixed(4)}</strong></div>
+              <div><span>Zero-crossing rate</span><strong>{validationResult.features.zero_crossing_rate.toFixed(4)}</strong></div>
+              <div><span>Spectral centroid</span><strong>{validationResult.features.spectral_centroid_hz.toFixed(1)} Hz</strong></div>
+            </div>
+          )}
+          <small>Signal measurements only — not a deepfake-detection result.</small>
         </div>
       )}
     </section>
