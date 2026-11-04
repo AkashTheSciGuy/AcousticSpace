@@ -78,3 +78,32 @@ def test_sanitizes_uploaded_name() -> None:
 def test_detects_header_without_trusting_mime_type() -> None:
     result = upload("clip.wav", valid_wav(), "application/octet-stream")
     assert result.status_code == 200
+
+
+def test_capabilities_expose_supported_formats_and_upload_limit() -> None:
+    response = client.get("/api/audio/capabilities")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["supported_formats"] == ["mp3", "wav"]
+    assert data["max_upload_bytes"] == 20 * 1024 * 1024
+
+
+def test_capabilities_match_preprocessing_settings() -> None:
+    from app.preprocessing import MAX_DURATION_SECONDS, TARGET_SAMPLE_RATE
+
+    data = client.get("/api/audio/capabilities").json()
+    assert data["max_inspection_duration_seconds"] == MAX_DURATION_SECONDS
+    assert data["processing_sample_rate_hz"] == TARGET_SAMPLE_RATE
+
+
+def test_capabilities_do_not_claim_a_deepfake_model() -> None:
+    data = client.get("/api/audio/capabilities").json()
+    assert data["upload_validation_available"] is True
+    assert data["feature_inspection_available"] is True
+    assert data["deepfake_classification_available"] is False
+
+
+def test_capabilities_endpoint_is_documented() -> None:
+    response = client.get("/openapi.json")
+    assert response.status_code == 200
+    assert "get" in response.json()["paths"]["/api/audio/capabilities"]

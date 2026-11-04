@@ -7,11 +7,27 @@ from typing import Annotated
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
+from app.preprocessing import MAX_DURATION_SECONDS, TARGET_SAMPLE_RATE
+
 router = APIRouter(prefix="/api/audio", tags=["audio"])
 
 MAX_FILE_BYTES = 20 * 1024 * 1024  # 20 MiB, aligned with the current frontend.
 CHUNK_SIZE = 1024 * 1024
 ALLOWED_EXTENSIONS = {"wav", "mp3"}
+
+
+@router.get("/capabilities")
+def get_audio_capabilities() -> dict[str, bool | int | float | list[str]]:
+    """Describe supported audio operations and their current limits."""
+    return {
+        "supported_formats": sorted(ALLOWED_EXTENSIONS),
+        "max_upload_bytes": MAX_FILE_BYTES,
+        "max_inspection_duration_seconds": MAX_DURATION_SECONDS,
+        "processing_sample_rate_hz": TARGET_SAMPLE_RATE,
+        "upload_validation_available": True,
+        "feature_inspection_available": True,
+        "deepfake_classification_available": False,
+    }
 
 
 def _looks_like_audio(header: bytes, extension: str) -> bool:
