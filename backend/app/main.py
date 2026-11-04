@@ -3,6 +3,7 @@
 from fastapi import FastAPI
 
 from app.audio_validation import router as audio_router
+from app.audio_inspection import router as inspection_router
 
 app = FastAPI(
     title="AcousticSpace API",
@@ -11,6 +12,7 @@ app = FastAPI(
 )
 
 app.include_router(audio_router)
+app.include_router(inspection_router)
 
 
 @app.get("/")
