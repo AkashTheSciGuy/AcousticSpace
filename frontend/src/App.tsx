@@ -1,12 +1,13 @@
 import AudioUpload from './components/AudioUpload'
 import RirAnalyzer from './components/RirAnalyzer'
+import BaselineClassifier from './components/BaselineClassifier'
 import './App.css'
 
 const pipelineSteps = [
   { number: '01', title: 'Audio intake', description: 'Choose and validate a recording.', status: 'Working' },
   { number: '02', title: 'Waveform preview', description: 'Visualize the selected audio.', status: 'Working' },
   { number: '03', title: 'Acoustic analysis', description: 'Measure audio features and analyze an uploaded RIR.', status: 'Working' },
-  { number: '04', title: 'Evidence review', description: 'Deepfake model predictions require training and validation.', status: 'Planned' },
+  { number: '04', title: 'Baseline inference', description: 'Model API is integrated; training on labeled data is required.', status: 'In progress' },
 ] as const
 
 function App() {
@@ -30,7 +31,7 @@ function App() {
         <div className="sidebar-footer">
           <span className="environment-dot" aria-hidden="true" />
           Frontend prototype
-          <small>Model inference not connected</small>
+          <small>Experimental model inference requires a trained artifact</small>
         </div>
       </aside>
       <main className="main-content">
@@ -48,6 +49,7 @@ function App() {
         </section>
         <AudioUpload />
         <RirAnalyzer />
+        <BaselineClassifier />
         <section className="info-grid" aria-label="Project information">
           <article className="info-card">
             <div className="info-card-icon" aria-hidden="true">01</div>
