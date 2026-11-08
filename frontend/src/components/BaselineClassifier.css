@@ -1,0 +1,12 @@
+.baseline-card { margin-top: 20px; padding: 27px; border: 1px solid #293951; border-radius: 17px; background: #141e2e; color: #d7e5fa; }
+.baseline-card h2 { margin: 12px 0 8px; font-size: 20px; }
+.baseline-card p, .baseline-card small { color: #a3b1c9; font-size: 12px; line-height: 1.7; }
+.baseline-status { border: 1px solid #334662; border-radius: 9px; background: #192b40; padding: 12px; }
+.baseline-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 15px 0; }
+.baseline-controls input { flex: 1; min-width: 170px; max-width: 100%; font-size: 12px; }
+.baseline-controls button { border: 0; border-radius: 9px; background: #7695ff; padding: 11px 15px; cursor: pointer; font-weight: 700; color: #07101f; }
+.baseline-controls button:disabled { opacity: .5; cursor: not-allowed; }
+.baseline-error { border: 1px solid #9c5768; border-radius: 9px; padding: 12px; color: #ffc4ce !important; }
+.baseline-results { border: 1px solid #357b71; border-radius: 10px; padding: 15px; background: #142e2d; margin-bottom: 12px; }
+.baseline-results strong { color: #bdece2; }
+@media (max-width: 700px) { .baseline-card { padding: 17px; } }
