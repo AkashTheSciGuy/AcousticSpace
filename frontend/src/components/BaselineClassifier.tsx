@@ -2,7 +2,25 @@ import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import './BaselineClassifier.css'
 
-type Status = { available: boolean; model_type: string; message: string }
+type EvaluationMetrics = {
+  samples: number
+  accuracy: number
+  precision_fake: number
+  recall_fake: number
+  f1_fake: number
+  confusion_matrix_real_fake: number[][]
+}
+type Evaluation = {
+  source: 'local_training_report'
+  warning: string
+  metrics: { val: EvaluationMetrics; test: EvaluationMetrics }
+}
+type Status = {
+  available: boolean
+  model_type: string
+  message: string
+  evaluation?: Evaluation
+}
 type Prediction = {
   status: 'predicted'
   filename: string
@@ -15,27 +33,49 @@ const MAX_SIZE = 20 * 1024 * 1024
 
 export default function BaselineClassifier() {
   const [status, setStatus] = useState<Status | null>(null)
+  const [statusLoading, setStatusLoading] = useState(true)
+  const statusControllerRef = useRef<AbortController | null>(null)
   const [file, setFile] = useState<File | null>(null)
   const [result, setResult] = useState<Prediction | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const controllerRef = useRef<AbortController | null>(null)
 
+  async function refreshStatus(controller: AbortController): Promise<void> {
+    statusControllerRef.current?.abort()
+    statusControllerRef.current = controller
+    setStatusLoading(true)
+    try {
+      const response = await fetch('/api/model/status', { signal: controller.signal })
+      if (!response.ok) throw new Error(`Model status unavailable (HTTP ${response.status}).`)
+      const data: unknown = await response.json()
+      if (!data || typeof data !== 'object' || typeof (data as Status).available !== 'boolean' ||
+          typeof (data as Status).message !== 'string') throw new Error('Unexpected model status response.')
+      if (!controller.signal.aborted) {
+        setStatus(data as Status)
+        setResult(null)
+        setError(null)
+      }
+    } catch (cause: unknown) {
+      if (!controller.signal.aborted) {
+        setStatus(null)
+        setError(cause instanceof Error ? cause.message : 'Cannot reach model API.')
+      }
+    } finally {
+      if (statusControllerRef.current === controller) {
+        setStatusLoading(false)
+        statusControllerRef.current = null
+      }
+    }
+  }
+
   useEffect(() => {
     const controller = new AbortController()
-    controllerRef.current = controller
-    void fetch('/api/model/status', { signal: controller.signal })
-      .then(async response => {
-        if (!response.ok) throw new Error(`Model status unavailable (HTTP ${response.status}).`)
-        const data: unknown = await response.json()
-        if (!data || typeof data !== 'object' || typeof (data as Status).available !== 'boolean' ||
-            typeof (data as Status).message !== 'string') throw new Error('Unexpected model status response.')
-        setStatus(data as Status)
-      })
-      .catch((cause: unknown) => {
-        if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : 'Cannot reach model API.')
-      })
-    return () => controller.abort()
+    void refreshStatus(controller)
+    return () => {
+      controller.abort()
+      controllerRef.current?.abort()
+    }
   }, [])
 
   function choose(event: ChangeEvent<HTMLInputElement>) {
@@ -87,9 +127,33 @@ export default function BaselineClassifier() {
     <span className="section-label">STEP 03 · EXPERIMENTAL CLASSIFICATION</span>
     <h2 id="baseline-title">Baseline model</h2>
     <p>Optional research-only audio classifier. It uses basic signal features, not RIR or AST.</p>
-    <p className="baseline-status" role="status">
-      {status ? (status.available ? 'Trained baseline available' : `Not ready: ${status.message}`) : 'Checking model availability…'}
-    </p>
+    <div className="baseline-status-row">
+      <p className="baseline-status" role="status">
+        {status ? (status.available ? 'Trained baseline available' : `Not ready: ${status.message}`)
+          : statusLoading ? 'Checking model availability…' : 'Model status could not be loaded.'}
+      </p>
+      <button type="button" className="baseline-refresh" disabled={statusLoading}
+        onClick={() => { void refreshStatus(new AbortController()) }}>
+        {statusLoading ? 'Checking…' : 'Refresh status'}
+      </button>
+    </div>
+    {status?.available && status.evaluation && (
+      <div className="baseline-evaluation" aria-label="Saved baseline evaluation">
+        <h3>Saved experiment results</h3>
+        <div className="baseline-evaluation-grid">
+          {(['val', 'test'] as const).map(split => {
+            const metrics = status.evaluation!.metrics[split]
+            return <div key={split} className="baseline-evaluation-split">
+              <strong>{split === 'val' ? 'Validation' : 'Test'} split</strong>
+              <span>Samples: {metrics.samples}</span>
+              <span>Accuracy: {(metrics.accuracy * 100).toFixed(1)}%</span>
+              <span>Fake-class F1: {(metrics.f1_fake * 100).toFixed(1)}%</span>
+            </div>
+          })}
+        </div>
+        <p>{status.evaluation.warning}</p>
+      </div>
+    )}
     <div className="baseline-controls">
       <input type="file" accept=".wav,.mp3,audio/wav,audio/mpeg" onChange={choose} aria-label="Choose recording for baseline classification" />
       <button type="button" onClick={() => { void predict() }} disabled={!status?.available || !file || busy}>
