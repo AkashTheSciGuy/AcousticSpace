@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 
 from app.features import extract_features
+from app.model_evaluation import read_evaluation
 from app.preprocessing import PreprocessedAudio
 
 EXPECTED_FEATURES = ('rms_amplitude', 'zero_crossing_rate', 'spectral_centroid_hz')
@@ -56,8 +57,12 @@ def model_status() -> dict:
         _load_model(path)
     except ModelUnavailableError as exc:
         return {'available': False, 'model_type': 'experimental_audio_feature_baseline', 'message': str(exc)}
-    return {'available': True, 'model_type': 'experimental_audio_feature_baseline',
-            'message': 'Experimental baseline installed; accuracy depends on separate dataset evaluation.'}
+    result = {'available': True, 'model_type': 'experimental_audio_feature_baseline',
+              'message': 'Experimental baseline installed; accuracy depends on dataset evaluation.'}
+    report = read_evaluation(path)
+    if report is not None:
+        result['evaluation'] = report
+    return result
 
 
 def predict_audio(audio: PreprocessedAudio) -> dict:
