@@ -154,6 +154,18 @@ export default function BaselineClassifier() {
         <p>{status.evaluation.warning}</p>
       </div>
     )}
+    {!status?.available && !statusLoading && (
+      <div className="baseline-training-guide" aria-label="How to enable baseline predictions">
+        <h3>To enable experimental predictions</h3>
+        <ol>
+          <li>Collect correctly labeled real and AI-generated recordings.</li>
+          <li>Prepare speaker/source-independent train, validation and test splits.</li>
+          <li>Train the baseline locally and review its evaluation results.</li>
+          <li>Install the trusted model artifact, then refresh model status.</li>
+        </ol>
+        <small>No trained model is bundled with AcousticSpace. The baseline does not analyze RIR.</small>
+      </div>
+    )}
     <div className="baseline-controls">
       <input type="file" accept=".wav,.mp3,audio/wav,audio/mpeg" onChange={choose} aria-label="Choose recording for baseline classification" />
       <button type="button" onClick={() => { void predict() }} disabled={!status?.available || !file || busy}>
