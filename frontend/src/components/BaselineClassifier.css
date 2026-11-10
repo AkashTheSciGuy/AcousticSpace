@@ -20,3 +20,8 @@
 .baseline-evaluation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
 .baseline-evaluation-split { display: flex; flex-direction: column; gap: 6px; padding: 11px; border-radius: 8px; background: #192b40; font-size: 13px; }
 .baseline-evaluation-split span { color: #b5c4da; }
+
+.baseline-training-guide { margin: 14px 0; padding: 16px; border: 1px solid #334662; border-radius: 10px; background: #192638; }
+.baseline-training-guide h3 { margin: 0 0 10px; font-size: 15px; }
+.baseline-training-guide ol { margin: 0 0 10px; padding-left: 20px; color: #cad8ec; font-size: 13px; line-height: 1.8; }
+.baseline-training-guide li { padding-left: 3px; }
