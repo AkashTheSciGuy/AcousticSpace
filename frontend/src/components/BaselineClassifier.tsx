@@ -163,6 +163,13 @@ export default function BaselineClassifier() {
           <li>Train the baseline locally and review its evaluation results.</li>
           <li>Install the trusted model artifact, then refresh model status.</li>
         </ol>
+        <p className="baseline-dataset-reference">
+          Suggested research dataset:{' '}
+          <a href="https://datashare.ed.ac.uk/items/31074a11-b6f6-4e92-a4ad-07093f8c0c45"
+             target="_blank" rel="noopener noreferrer">
+            ASVspoof 2019 Logical Access (official source)
+          </a>. Download and prepare the dataset locally; it is not included in the app.
+        </p>
         <small>No trained model is bundled with AcousticSpace. The baseline does not analyze RIR.</small>
       </div>
     )}
