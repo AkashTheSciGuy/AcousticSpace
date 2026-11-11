@@ -14,7 +14,7 @@ import soundfile as sf
 
 TARGET_SAMPLE_RATE = 16_000
 MAX_DURATION_SECONDS = 60.0
-SUPPORTED_SUFFIXES = {".wav", ".mp3"}
+SUPPORTED_SUFFIXES = {".wav", ".mp3", ".flac"}
 
 
 @dataclass(frozen=True)
@@ -33,10 +33,10 @@ def load_audio(
     sample_rate: int = TARGET_SAMPLE_RATE,
     max_duration_seconds: float = MAX_DURATION_SECONDS,
 ) -> PreprocessedAudio:
-    """Decode a WAV/MP3 recording and return 16-kHz mono float32 samples.
+    """Decode trusted WAV/MP3/FLAC input to 16-kHz mono float32 samples.
 
-    Inspect metadata before decoding to reject excessive durations early.
-    Only use paths to trusted, already validated audio files.
+    FLAC is supported here for offline datasets. HTTP upload routes have their
+    own stricter format validation and remain WAV/MP3-only.
 
     Raises:
         ValueError: invalid settings, unsupported format, silent/empty input,
@@ -47,7 +47,7 @@ def load_audio(
     if sample_rate <= 0 or max_duration_seconds <= 0:
         raise ValueError("Sample rate and maximum duration must be positive.")
     if file_path.suffix.lower() not in SUPPORTED_SUFFIXES:
-        raise ValueError("Only WAV and MP3 files are supported.")
+        raise ValueError("Only WAV and MP3 files are supported by uploads; FLAC is additionally supported for offline training.")
     if not file_path.is_file():
         raise OSError(f"Audio file does not exist: {file_path}")
 

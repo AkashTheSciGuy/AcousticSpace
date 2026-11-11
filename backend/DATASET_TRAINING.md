@@ -1,60 +1,61 @@
-# AcousticSpace — baseline training workflow
+# AcousticSpace — ASVspoof 2019 LA baseline training
 
-This is an **experimental audio-feature classifier**, not an RIR-based or AST-based deepfake detector. The dataset and independent evaluation are not supplied by this repository.
+This workflow trains the **experimental three-feature logistic-regression baseline** (RMS, zero-crossing rate, spectral centroid). It is **not** the proposed RIR/AST deepfake detector.
 
-## 1. Prepare permitted, labeled audio recordings
+## 1. Obtain the original dataset
 
-Place recordings under a local dataset directory (do not commit audio or speaker metadata to GitHub without authorization):
+Download **ASVspoof 2019 Logical Access (LA)** from the official Edinburgh DataShare record:
+
+https://datashare.ed.ac.uk/items/31074a11-b6f6-4e92-a4ad-07093f8c0c45
+
+The `LA.zip` archive is approximately 7.12 GB. Review the upstream license before use. Extract it on a drive with sufficient free space (for example `F:\Datasets\ASVspoof2019\LA`). Do not commit recordings or model artifacts to GitHub.
+
+The extracted `LA` directory should include:
 
 ```text
-F:\Datasets\AcousticSpace\
-  real\speaker_a\recording1.wav
-  fake\speaker_a\recording2.wav
-  real\speaker_b\recording3.wav
-  fake\speaker_b\recording4.wav
-  ...
+LA/
+  ASVspoof2019_LA_train/flac/
+  ASVspoof2019_LA_dev/flac/
+  ASVspoof2019_LA_cm_protocols/
+    ASVspoof2019.LA.cm.train.trn.txt
+    ASVspoof2019.LA.cm.dev.trl.txt
 ```
 
-Use WAV or MP3 files. A useful dataset needs **multiple independent speakers or sources**, not several near-identical clips from one speaker. Confirm the provenance and licenses of the recordings. A clip named `fake` must actually be AI-generated or otherwise correctly labeled.
+The importer also accepts `ASVspoof2019_LA_protocols/` as a protocol-directory name.
 
-## 2. Map all audio files to speaker/source groups
+## 2. Import a bounded, speaker-disjoint dataset manifest
 
-Create a CSV *outside the Git repository*, e.g. `F:\Datasets\AcousticSpace\groups.csv`:
-
-```csv
-path,group
-real/speaker_a/recording1.wav,speaker_a
-fake/speaker_a/recording2.wav,speaker_a
-real/speaker_b/recording3.wav,speaker_b
-fake/speaker_b/recording4.wav,speaker_b
-```
-
-Include **every** unique WAV/MP3 file in `real` and `fake`. Assign the **same group** to every recording from the same person/source across both real and fake labels. Do not use filenames, labels, or random IDs as a substitute for real provenance. At least three independent groups containing each class are required; more are strongly recommended.
-
-## 3. Prepare group-independent splits (Windows CMD)
+Run from **Windows CMD**:
 
 ```cmd
 cd /d F:\Projects\AcousticSpace\backend
-.venv\Scripts\python.exe scripts\prepare_dataset.py F:\Datasets\AcousticSpace --groups F:\Datasets\AcousticSpace\groups.csv --output F:\Datasets\AcousticSpace\manifest.csv
+.venv\Scripts\python.exe scripts\import_asvspoof2019.py "F:\Datasets\ASVspoof2019\LA" --output "F:\Datasets\ASVspoof2019\manifest.csv" --max-per-speaker-class 10
 ```
 
-The manifest includes a `group` column. Group identifiers are kept out of cross-split overlap. This addresses exact-match and declared-group overlap, but **cannot guarantee** independent sources when the supplied group IDs are inaccurate or when data contains near-duplicates.
+The importer reads official protocol labels and speaker IDs, samples at most 10 recordings of each class per speaker, hashes the selected FLAC recordings, and generates the same CSV schema used by `train_baseline.py`. Official **training** recordings remain in `train`. Official **development** speakers are assigned entirely to `val` or `test`; no speaker crosses splits. The official **evaluation** partition is left untouched.
 
-Without `--groups`, the script retains the old clip-level splitting logic; do not report that as speaker-independent evaluation.
+The importer never edits the audio or overwrites a manifest. For quicker local debugging, reduce the sampling limit to `3`. For more extensive research, increase it.
 
-## 4. Train only after the dataset is ready
+## 3. Train the experimental baseline
 
 ```cmd
 cd /d F:\Projects\AcousticSpace\backend
 .venv\Scripts\python.exe -m pip install -r requirements-ml.txt
 if not exist models mkdir models
-.venv\Scripts\python.exe scripts\train_baseline.py F:\Datasets\AcousticSpace F:\Datasets\AcousticSpace\manifest.csv --output models\baseline_model.joblib
+.venv\Scripts\python.exe scripts\train_baseline.py "F:\Datasets\ASVspoof2019\LA" "F:\Datasets\ASVspoof2019\manifest.csv" --output models\baseline_model.joblib
 ```
 
-The trainer saves `backend/models/baseline_model.joblib` and `backend/models/baseline_model.json`. Do **not** run against an existing output path unless you intentionally move or archive the old results first; the script deliberately refuses overwriting.
+The script writes `models\baseline_model.joblib` and adjacent `models\baseline_model.json` metrics. The API already looks for this model path by default. Only load a **model artifact you created yourself**; joblib/pickle deserialization can execute code.
 
-Train/validation/test results are only **experiment results**. Review label quality, class balance, speaker/source independence, compression/device confounders, and errors before citing accuracy. Model files use `joblib` and must only be loaded from a trusted local training run.
+## 4. Verify and view results
 
-## 5. Verify dashboard readiness
+Start FastAPI:
 
-Start FastAPI and Vite as usual. Open `http://localhost:8000/api/model/status` or refresh the Baseline Model status in the dashboard. The model should remain unavailable until a compatible local artifact exists.
+```cmd
+cd /d F:\Projects\AcousticSpace\backend
+.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+```
+
+Open `http://localhost:8000/api/model/status`. If the model trained successfully, `available` should be `true`. In the frontend, click **Refresh status**, then run an experimental prediction on a WAV/MP3 recording. The dashboard should show validation/test metrics from the local report.
+
+**Research limitations:** This is a quick, small audio-feature baseline, **not an RIR-based classifier**. Development-data reuse can bias later tuning; reserve the official evaluation partition for a separate final evaluation. Scores are neither calibrated confidence nor forensic proof. Never claim benchmark accuracy without reporting the actual independent evaluation protocol and dataset.
