@@ -147,7 +147,12 @@ export default function BaselineClassifier() {
               <strong>{split === 'val' ? 'Validation' : 'Test'} split</strong>
               <span>Samples: {metrics.samples}</span>
               <span>Accuracy: {(metrics.accuracy * 100).toFixed(1)}%</span>
+              <span>Fake precision: {(metrics.precision_fake * 100).toFixed(1)}%</span>
+              <span>Fake recall: {(metrics.recall_fake * 100).toFixed(1)}%</span>
               <span>Fake-class F1: {(metrics.f1_fake * 100).toFixed(1)}%</span>
+              <span>Confusion matrix (real/fake):</span>
+              <span>Actual real → real: {metrics.confusion_matrix_real_fake[0][0]}, fake: {metrics.confusion_matrix_real_fake[0][1]}</span>
+              <span>Actual fake → real: {metrics.confusion_matrix_real_fake[1][0]}, fake: {metrics.confusion_matrix_real_fake[1][1]}</span>
             </div>
           })}
         </div>
