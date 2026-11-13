@@ -150,9 +150,16 @@ export default function BaselineClassifier() {
               <span>Fake precision: {(metrics.precision_fake * 100).toFixed(1)}%</span>
               <span>Fake recall: {(metrics.recall_fake * 100).toFixed(1)}%</span>
               <span>Fake-class F1: {(metrics.f1_fake * 100).toFixed(1)}%</span>
-              <span>Confusion matrix (real/fake):</span>
-              <span>Actual real → real: {metrics.confusion_matrix_real_fake[0][0]}, fake: {metrics.confusion_matrix_real_fake[0][1]}</span>
-              <span>Actual fake → real: {metrics.confusion_matrix_real_fake[1][0]}, fake: {metrics.confusion_matrix_real_fake[1][1]}</span>
+              <div className="baseline-matrix">
+                <span>Confusion matrix (actual × predicted)</span>
+                <table aria-label={`${split} confusion matrix`}>
+                  <thead><tr><th scope="col">Actual / Predicted</th><th scope="col">Real</th><th scope="col">Fake</th></tr></thead>
+                  <tbody>
+                    <tr><th scope="row">Real</th><td>{metrics.confusion_matrix_real_fake[0][0]}</td><td>{metrics.confusion_matrix_real_fake[0][1]}</td></tr>
+                    <tr><th scope="row">Fake</th><td>{metrics.confusion_matrix_real_fake[1][0]}</td><td>{metrics.confusion_matrix_real_fake[1][1]}</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           })}
         </div>
