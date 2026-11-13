@@ -25,3 +25,10 @@
 .baseline-training-guide h3 { margin: 0 0 10px; font-size: 15px; }
 .baseline-training-guide ol { margin: 0 0 10px; padding-left: 20px; color: #cad8ec; font-size: 13px; line-height: 1.8; }
 .baseline-training-guide li { padding-left: 3px; }
+
+.baseline-matrix { margin-top: 10px; overflow-x: auto; }
+.baseline-matrix > span { display: block; margin-bottom: 8px; color: #cad8ec; }
+.baseline-matrix table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: center; }
+.baseline-matrix th, .baseline-matrix td { border: 1px solid #435672; padding: 8px 5px; }
+.baseline-matrix th { font-weight: 600; color: #dce8fc; background: #20334c; }
+.baseline-matrix td { color: #dce8fc; }
