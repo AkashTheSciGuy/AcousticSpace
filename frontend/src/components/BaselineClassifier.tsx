@@ -160,6 +160,10 @@ export default function BaselineClassifier() {
                   </tbody>
                 </table>
               </div>
+              <small className="baseline-confusion-help">
+                False positive: a real recording predicted fake. False negative: a fake recording predicted real.
+                Lower false-negative counts mean fewer fake clips were missed on this split.
+              </small>
             </div>
           })}
         </div>
