@@ -1,32 +1,45 @@
-# React + TypeScript + Vite
+# AcousticSpace Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The AcousticSpace frontend is a React, TypeScript, and Vite interface for examining audio recordings and displaying experimental audio-analysis results.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Select WAV or MP3 recordings, inspect their waveform, and control playback.
+- Submit recordings to the FastAPI backend for audio inspection.
+- View room impulse response (RIR) analysis separately from ordinary recording inspection.
+- Check whether the experimental baseline classifier is installed.
+- Display validation and test metrics from the locally trained baseline model, including accuracy, fake-class precision, recall, F1, and labeled confusion matrices.
+- Upload a supported recording for a baseline prediction when a locally trained model is available.
 
-## React Compiler
+The classifier is a research baseline using RMS amplitude, zero-crossing rate, and spectral centroid. It does **not** perform RIR-based deepfake detection, and its class scores should not be treated as calibrated probabilities or forensic evidence.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Run locally (Windows CMD)
 
-## Expanding the Oxlint configuration
+Start the FastAPI backend in a separate terminal before opening the frontend:
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```cmd
+cd /d F:\Projects\AcousticSpace\backend
+.venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Then run the frontend:
+
+```cmd
+cd /d F:\Projects\AcousticSpace\frontend
+npm.cmd install
+npm.cmd run dev
+```
+
+Open `http://localhost:5173`.
+
+To verify the frontend production build:
+
+```cmd
+npm.cmd run build
+```
+
+## Baseline integration checkpoint — November 15, 2026
+
+The locally trained baseline was confirmed available through `GET /api/model/status` (HTTP 200), and the frontend's baseline prediction flow was manually verified with a recording. The local ASVspoof 2019 LA experiment used 400 training, 140 validation, and 160 test recordings. Its validation accuracy was 75.71%, and test accuracy was 70.63%. These are **dataset-specific experimental measurements**, not general real-world detection accuracy. Neither the dataset nor the trained model is shipped in this repository.
+
+For dataset preparation and training, see `backend/DATASET_TRAINING.md` in the repository root.
