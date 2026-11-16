@@ -12,6 +12,12 @@ export type AudioValidationResult = {
     zero_crossing_rate: number
     spectral_centroid_hz: number
   }
+  speech_acoustics?: {
+    mean_spectral_flatness: number
+    rms_coefficient_of_variation: number
+    mean_positive_spectral_flux: number
+    disclaimer: string
+  }
 }
 
 // Real FastAPI validation is the default. Set VITE_AUDIO_API_MODE=mock for offline demos.
@@ -42,6 +48,14 @@ function isValidationResult(value: unknown): value is AudioValidationResult {
         (key) => typeof (item.features as Record<string, unknown>)[key] === 'number' &&
           Number.isFinite((item.features as Record<string, number>)[key]),
       )
+    )) &&
+    (item.speech_acoustics === undefined || (
+      typeof item.speech_acoustics === 'object' && item.speech_acoustics !== null &&
+      ['mean_spectral_flatness', 'rms_coefficient_of_variation', 'mean_positive_spectral_flux'].every(
+        (key) => typeof (item.speech_acoustics as Record<string, unknown>)[key] === 'number' &&
+          Number.isFinite((item.speech_acoustics as Record<string, number>)[key]),
+      ) &&
+      typeof (item.speech_acoustics as Record<string, unknown>).disclaimer === 'string'
     ))
   )
 }
