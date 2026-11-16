@@ -1,4 +1,4 @@
-"""Bounded audio inspection endpoint; returns measured features, not AI predictions."""
+"""Bounded audio inspection endpoint; returns measurements, not AI predictions."""
 
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -9,6 +9,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from app.audio_validation import CHUNK_SIZE, MAX_FILE_BYTES, _looks_like_audio
 from app.features import extract_features
 from app.preprocessing import load_audio
+from app.speech_acoustics import extract_speech_acoustics
 
 router = APIRouter(prefix="/api/audio", tags=["audio"])
 
@@ -17,7 +18,7 @@ router = APIRouter(prefix="/api/audio", tags=["audio"])
 async def inspect_audio(
     file: Annotated[UploadFile, File(description="WAV or MP3, at most 20 MiB")],
 ) -> dict:
-    """Validate and decode an upload, returning genuine signal measurements."""
+    """Inspect an upload with basic features and exploratory speech descriptors."""
     filename = (file.filename or "").replace("\\", "/").rsplit("/", 1)[-1]
     extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     temporary_path: Path | None = None
@@ -47,6 +48,7 @@ async def inspect_audio(
         try:
             audio = load_audio(temporary_path)
             features = extract_features(audio)
+            speech_acoustics = extract_speech_acoustics(audio)
         except (ValueError, OSError, RuntimeError) as exc:
             raise HTTPException(422, f"Audio could not be inspected: {exc}") from exc
 
@@ -62,6 +64,12 @@ async def inspect_audio(
                 "rms_amplitude": round(features.rms_amplitude, 6),
                 "zero_crossing_rate": round(features.zero_crossing_rate, 6),
                 "spectral_centroid_hz": round(features.spectral_centroid_hz, 2),
+            },
+            "speech_acoustics": {
+                "mean_spectral_flatness": round(speech_acoustics.mean_spectral_flatness, 6),
+                "rms_coefficient_of_variation": round(speech_acoustics.rms_coefficient_of_variation, 6),
+                "mean_positive_spectral_flux": round(speech_acoustics.mean_positive_spectral_flux, 6),
+                "disclaimer": "Exploratory speech descriptors only; not a measured room impulse response or deepfake verdict.",
             },
         }
     finally:
