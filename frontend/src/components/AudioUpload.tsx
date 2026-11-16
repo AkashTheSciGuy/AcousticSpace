@@ -197,6 +197,17 @@ export default function AudioUpload() {
               <div><span>Spectral centroid</span><strong>{validationResult.features.spectral_centroid_hz.toFixed(1)} Hz</strong></div>
             </div>
           )}
+          {validationResult.speech_acoustics && (
+            <div aria-label="Exploratory speech acoustics">
+              <h3>Exploratory speech acoustics</h3>
+              <div className="audio-feature-grid">
+                <div><span>Spectral flatness</span><strong>{validationResult.speech_acoustics.mean_spectral_flatness.toFixed(4)}</strong></div>
+                <div><span>Energy variation</span><strong>{validationResult.speech_acoustics.rms_coefficient_of_variation.toFixed(4)}</strong></div>
+                <div><span>Spectral flux</span><strong>{validationResult.speech_acoustics.mean_positive_spectral_flux.toFixed(4)}</strong></div>
+              </div>
+              <small>{validationResult.speech_acoustics.disclaimer}</small>
+            </div>
+          )}
           <small>Signal measurements only — not a deepfake-detection result.</small>
         </div>
       )}
