@@ -1,6 +1,7 @@
 import AudioUpload from './components/AudioUpload'
 import RirAnalyzer from './components/RirAnalyzer'
 import BaselineClassifier from './components/BaselineClassifier'
+import AcousticComparison from './components/AcousticComparison'
 import './App.css'
 
 const pipelineSteps = [
@@ -50,6 +51,7 @@ function App() {
         <AudioUpload />
         <RirAnalyzer />
         <BaselineClassifier />
+        <AcousticComparison />
         <section className="info-grid" aria-label="Project information">
           <article className="info-card">
             <div className="info-card-icon" aria-hidden="true">01</div>
