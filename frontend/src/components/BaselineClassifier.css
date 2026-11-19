@@ -34,3 +34,7 @@
 .baseline-matrix td { color: #dce8fc; }
 
 .baseline-confusion-help { display: block; margin-top: 8px; color: #a3b1c9; line-height: 1.5; }
+
+.baseline-variant-label { display: block; margin: 12px 0 6px; font-size: 13px; color: #d7e5fa; }
+.baseline-variant { display: block; width: min(100%, 360px); padding: 10px 12px; border-radius: 8px; border: 1px solid #45607f; background: #192b40; color: #d7e5fa; font-size: 13px; }
+.baseline-variant-note { margin: 10px 0; }
