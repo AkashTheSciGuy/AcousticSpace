@@ -15,14 +15,17 @@ type Evaluation = {
   warning: string
   metrics: { val: EvaluationMetrics; test: EvaluationMetrics }
 }
+type ModelVariant = 'baseline' | 'acoustic'
 type Status = {
   available: boolean
   model_type: string
+  variant?: ModelVariant
   message: string
   evaluation?: Evaluation
 }
 type Prediction = {
   status: 'predicted'
+  variant?: ModelVariant
   filename: string
   label: 'real' | 'fake'
   fake_probability: number
@@ -32,6 +35,7 @@ type Prediction = {
 const MAX_SIZE = 20 * 1024 * 1024
 
 export default function BaselineClassifier() {
+  const [variant, setVariant] = useState<ModelVariant>('baseline')
   const [status, setStatus] = useState<Status | null>(null)
   const [statusLoading, setStatusLoading] = useState(true)
   const statusControllerRef = useRef<AbortController | null>(null)
@@ -41,12 +45,12 @@ export default function BaselineClassifier() {
   const [busy, setBusy] = useState(false)
   const controllerRef = useRef<AbortController | null>(null)
 
-  async function refreshStatus(controller: AbortController): Promise<void> {
+  async function refreshStatus(controller: AbortController, selectedVariant: ModelVariant): Promise<void> {
     statusControllerRef.current?.abort()
     statusControllerRef.current = controller
     setStatusLoading(true)
     try {
-      const response = await fetch('/api/model/status', { signal: controller.signal })
+      const response = await fetch(`/api/model/status?variant=${selectedVariant}`, { signal: controller.signal })
       if (!response.ok) throw new Error(`Model status unavailable (HTTP ${response.status}).`)
       const data: unknown = await response.json()
       if (!data || typeof data !== 'object' || typeof (data as Status).available !== 'boolean' ||
@@ -71,12 +75,16 @@ export default function BaselineClassifier() {
 
   useEffect(() => {
     const controller = new AbortController()
-    void refreshStatus(controller)
+    setStatus(null)
+    setFile(null)
+    setResult(null)
+    setError(null)
+    void refreshStatus(controller, variant)
     return () => {
       controller.abort()
       controllerRef.current?.abort()
     }
-  }, [])
+  }, [variant])
 
   function choose(event: ChangeEvent<HTMLInputElement>) {
     controllerRef.current?.abort()
@@ -102,7 +110,7 @@ export default function BaselineClassifier() {
     try {
       const body = new FormData()
       body.append('file', file, file.name)
-      const response = await fetch('/api/model/predict', { method: 'POST', body, signal: controller.signal })
+      const response = await fetch(`/api/model/predict?variant=${variant}`, { method: 'POST', body, signal: controller.signal })
       const data: unknown = await response.json()
       if (!response.ok) {
         const detail = data && typeof data === 'object' && 'detail' in data ? (data as { detail: unknown }).detail : null
@@ -125,18 +133,25 @@ export default function BaselineClassifier() {
 
   return <section className="baseline-card" aria-labelledby="baseline-title">
     <span className="section-label">STEP 03 · EXPERIMENTAL CLASSIFICATION</span>
-    <h2 id="baseline-title">Baseline model</h2>
-    <p>Optional research-only audio classifier. It uses basic signal features, not RIR or AST.</p>
+    <h2 id="baseline-title">Experimental model inference</h2>
+    <p>Choose between the deployed three-feature baseline and an optional six-feature speech-acoustic candidate. Neither estimates RIR.</p>
+    <label className="baseline-variant-label" htmlFor="baseline-variant">Prediction model</label>
+    <select id="baseline-variant" className="baseline-variant" value={variant}
+      onChange={(event) => setVariant(event.target.value as ModelVariant)}>
+      <option value="baseline">3-feature baseline (default)</option>
+      <option value="acoustic">6-feature speech-acoustic candidate</option>
+    </select>
     <div className="baseline-status-row">
       <p className="baseline-status" role="status">
-        {status ? (status.available ? 'Trained baseline available' : `Not ready: ${status.message}`)
+        {status ? (status.available ? `${variant === 'baseline' ? 'Trained baseline' : 'Trained acoustic candidate'} available` : `Not ready: ${status.message}`)
           : statusLoading ? 'Checking model availability…' : 'Model status could not be loaded.'}
       </p>
       <button type="button" className="baseline-refresh" disabled={statusLoading}
-        onClick={() => { void refreshStatus(new AbortController()) }}>
+        onClick={() => { void refreshStatus(new AbortController(), variant) }}>
         {statusLoading ? 'Checking…' : 'Refresh status'}
       </button>
     </div>
+    {variant === 'acoustic' && <p className="baseline-variant-note">Candidate results are displayed separately under Feature comparison. Selecting this model does not replace the baseline.</p>}
     {status?.available && status.evaluation && (
       <div className="baseline-evaluation" aria-label="Saved baseline evaluation">
         <h3>Saved experiment results</h3>
@@ -170,7 +185,7 @@ export default function BaselineClassifier() {
         <p>{status.evaluation.warning}</p>
       </div>
     )}
-    {!status?.available && !statusLoading && (
+    {variant === 'baseline' && !status?.available && !statusLoading && (
       <div className="baseline-training-guide" aria-label="How to enable baseline predictions">
         <h3>To enable experimental predictions</h3>
         <ol>
@@ -202,6 +217,6 @@ export default function BaselineClassifier() {
       <p>Model fake-class score: {(result.fake_probability * 100).toFixed(1)}%</p>
       <small>{result.disclaimer}</small>
     </div>}
-    <small>Class scores are not independently validated confidence estimates. No result is produced until a real trained model is installed.</small>
+    <small>Class scores are not calibrated confidence estimates. The six-feature candidate is not a measured RIR model. Only trained local models produce predictions.</small>
   </section>
 }
