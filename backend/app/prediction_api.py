@@ -1,8 +1,7 @@
-"""Endpoints for experimental baseline readiness and inference."""
-
+"""Experimental model readiness and audio inference endpoints."""
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
@@ -11,19 +10,23 @@ from app.model_inference import ModelUnavailableError, model_status, predict_aud
 from app.preprocessing import load_audio
 
 router = APIRouter(prefix='/api/model', tags=['experimental-model'])
+ModelVariant = Literal['baseline', 'acoustic']
 
 
 @router.get('/status')
-def get_model_status() -> dict:
-    return model_status()
+def get_model_status(variant: ModelVariant = 'baseline') -> dict:
+    return model_status(variant)
 
 
 @router.post('/predict')
-async def predict_uploaded_audio(file: Annotated[UploadFile, File(description='WAV/MP3, at most 20 MiB and 60 s')]) -> dict:
-    """Return 503 until a locally trained, trusted model is installed."""
+async def predict_uploaded_audio(
+    file: Annotated[UploadFile, File(description='WAV/MP3, at most 20 MiB and 60 s')],
+    variant: ModelVariant = 'baseline',
+) -> dict:
+    """Use baseline by default; acoustic inference requires a separately trained artifact."""
     temp_path: Path | None = None
     try:
-        state = model_status()
+        state = model_status(variant)
         if not state['available']:
             raise HTTPException(status_code=503, detail=state['message'])
         filename = (file.filename or '').replace('\\', '/').rsplit('/', 1)[-1]
@@ -47,7 +50,7 @@ async def predict_uploaded_audio(file: Annotated[UploadFile, File(description='W
                 stream.write(chunk)
         try:
             audio = load_audio(temp_path)
-            result = predict_audio(audio)
+            result = predict_audio(audio, variant)
         except ModelUnavailableError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         except (ValueError, OSError, RuntimeError) as exc:

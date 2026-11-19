@@ -1,11 +1,10 @@
-"""Safe-by-default baseline inference service for a locally trained, trusted model.
+"""Experimental model loading and inference for trusted local training artifacts.
 
-This is an experimental audio-feature baseline, NOT the RIR/AST detector.
-Do not load untrusted joblib/pickle artifacts: joblib deserialization runs code.
+The default baseline remains unchanged. The opt-in six-feature candidate is
+speech-acoustic, not RIR-based; neither score is forensic evidence.
+Never load joblib artifacts from untrusted sources.
 """
-
 import os
-from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -13,76 +12,108 @@ import numpy as np
 from app.features import extract_features
 from app.model_evaluation import read_evaluation
 from app.preprocessing import PreprocessedAudio
+from app.speech_acoustics import extract_speech_acoustics
 
 EXPECTED_FEATURES = ('rms_amplitude', 'zero_crossing_rate', 'spectral_centroid_hz')
+EXTRA_FEATURES = ('mean_spectral_flatness', 'rms_coefficient_of_variation', 'mean_positive_spectral_flux')
 EXPECTED_LABELS = ('real', 'fake')
-DEFAULT_MODEL_PATH = Path(__file__).resolve().parents[1] / 'models' / 'baseline_model.joblib'
+MODEL_DIR = Path(__file__).resolve().parents[1] / 'models'
+DEFAULT_MODEL_PATH = MODEL_DIR / 'baseline_model.joblib'
+CANDIDATE_MODEL_PATH = MODEL_DIR / 'acoustic_candidate.joblib'
+VARIANTS = ('baseline', 'acoustic')
 
 
 class ModelUnavailableError(RuntimeError):
-    """No compatible, trusted, locally trained baseline model is available."""
+    """No compatible, trusted, locally trained model is available."""
 
 
-def model_path() -> Path:
-    """An operator-controlled local path; never accepted from an HTTP request."""
-    override = os.getenv('ACOUSTICSPACE_BASELINE_MODEL')
-    return Path(override).expanduser().resolve() if override else DEFAULT_MODEL_PATH
+def _variant(variant: str) -> str:
+    if variant not in VARIANTS:
+        raise ValueError('Unsupported model variant.')
+    return variant
 
 
-def _load_model(path: Path):
+def model_path(variant: str = 'baseline') -> Path:
+    """Resolve an operator-configured local model file, never from upload data."""
+    variant = _variant(variant)
+    name = 'ACOUSTICSPACE_BASELINE_MODEL' if variant == 'baseline' else 'ACOUSTICSPACE_ACOUSTIC_MODEL'
+    default = DEFAULT_MODEL_PATH if variant == 'baseline' else CANDIDATE_MODEL_PATH
+    override = os.getenv(name)
+    return Path(override).expanduser().resolve() if override else default
+
+
+def _load_model(path: Path, variant: str = 'baseline'):
+    variant = _variant(variant)
     if not path.is_file():
-        raise ModelUnavailableError('No trained baseline model is installed. Train on labeled audio first.')
+        raise ModelUnavailableError('No trained model found for the selected variant.')
     try:
         import joblib
-        artifact = joblib.load(path)  # Load ONLY self-generated, trusted artifacts.
+        artifact = joblib.load(path)  # Only operator-created trusted files.
     except (ImportError, OSError, ValueError, EOFError, KeyError, TypeError) as exc:
-        raise ModelUnavailableError('Baseline model dependencies or artifact are unavailable.') from exc
-    if not isinstance(artifact, dict) or tuple(artifact.get('features', ())) != EXPECTED_FEATURES or tuple(artifact.get('labels', ())) != EXPECTED_LABELS:
-        raise ModelUnavailableError('Incompatible baseline model artifact.')
+        raise ModelUnavailableError('Model dependencies or artifact are unavailable.') from exc
+    expected = EXPECTED_FEATURES if variant == 'baseline' else EXPECTED_FEATURES + EXTRA_FEATURES
+    if (not isinstance(artifact, dict)
+            or tuple(artifact.get('features', ())) != expected
+            or tuple(artifact.get('labels', ())) != EXPECTED_LABELS):
+        raise ModelUnavailableError('Incompatible model artifact for the selected variant.')
     pipeline = artifact.get('pipeline')
     if not callable(getattr(pipeline, 'predict_proba', None)) or not hasattr(pipeline, 'classes_'):
-        raise ModelUnavailableError('Model lacks calibrated class probability interface.')
+        raise ModelUnavailableError('Model lacks class probability interface.')
     classes = np.asarray(pipeline.classes_)
     if classes.shape != (2,) or set(classes.tolist()) != {0, 1}:
         raise ModelUnavailableError('Model classes do not match real=0 and fake=1.')
     return pipeline
 
 
-def model_status() -> dict:
-    path = model_path()
-    if not path.is_file():
-        return {'available': False, 'model_type': 'experimental_audio_feature_baseline',
-                'message': 'No trained model found. Dataset preparation and training are required.'}
+def model_status(variant: str = 'baseline') -> dict:
+    variant = _variant(variant)
+    path = model_path(variant)
+    model_type = ('experimental_audio_feature_baseline' if variant == 'baseline'
+                  else 'experimental_speech_acoustic_candidate')
     try:
-        _load_model(path)
+        _load_model(path, variant)
     except ModelUnavailableError as exc:
-        return {'available': False, 'model_type': 'experimental_audio_feature_baseline', 'message': str(exc)}
-    result = {'available': True, 'model_type': 'experimental_audio_feature_baseline',
-              'message': 'Experimental baseline installed; accuracy depends on dataset evaluation.'}
-    report = read_evaluation(path)
-    if report is not None:
-        result['evaluation'] = report
+        return {'available': False, 'model_type': model_type, 'variant': variant, 'message': str(exc)}
+    result = {'available': True, 'model_type': model_type, 'variant': variant,
+              'message': 'Experimental model installed; performance is dataset-dependent.'}
+    # The original baseline has its own exact sidecar report. Candidate results
+    # are shown in the separately verified /api/model/comparison endpoint.
+    if variant == 'baseline':
+        report = read_evaluation(path)
+        if report is not None:
+            result['evaluation'] = report
     return result
 
 
-def predict_audio(audio: PreprocessedAudio) -> dict:
-    pipeline = _load_model(model_path())
-    f = extract_features(audio)
-    values = np.array([[f.rms_amplitude, f.zero_crossing_rate, f.spectral_centroid_hz]], dtype=np.float64)
+def predict_audio(audio: PreprocessedAudio, variant: str = 'baseline') -> dict:
+    variant = _variant(variant)
+    pipeline = _load_model(model_path(variant), variant)
+    features = extract_features(audio)
+    values = [float(getattr(features, key)) for key in EXPECTED_FEATURES]
+    if variant == 'acoustic':
+        extra = extract_speech_acoustics(audio)
+        values.extend(float(getattr(extra, key)) for key in EXTRA_FEATURES)
+    array = np.asarray([values], dtype=np.float64)
+    if not np.isfinite(array).all():
+        raise ModelUnavailableError('Recording produced non-finite model features.')
     try:
-        probs = np.asarray(pipeline.predict_proba(values), dtype=float)
+        probabilities = np.asarray(pipeline.predict_proba(array), dtype=np.float64)
     except (ValueError, TypeError, AttributeError) as exc:
-        raise ModelUnavailableError('The installed baseline model could not process this recording.') from exc
-    if probs.shape != (1, 2) or not np.isfinite(probs).all() or (probs < 0).any() or (probs > 1).any() or not np.isclose(probs.sum(), 1, atol=1e-5):
+        raise ModelUnavailableError('The installed model could not process this recording.') from exc
+    if (probabilities.shape != (1, 2) or not np.isfinite(probabilities).all()
+            or (probabilities < 0).any() or (probabilities > 1).any()
+            or not np.isclose(probabilities.sum(), 1, atol=1e-5)):
         raise ModelUnavailableError('The installed model returned invalid probabilities.')
-    classes = list(pipeline.classes_)
-    fake_probability = float(probs[0, classes.index(1)])
+    fake = float(probabilities[0, list(pipeline.classes_).index(1)])
+    description = ('RMS, zero-crossing rate and spectral centroid' if variant == 'baseline'
+                   else 'three baseline and three exploratory speech-acoustic features')
     return {
         'status': 'predicted',
-        'model_type': 'experimental_audio_feature_baseline',
-        'label': 'fake' if fake_probability >= 0.5 else 'real',
-        'fake_probability': round(fake_probability, 6),
-        'real_probability': round(1.0 - fake_probability, 6),
-        'disclaimer': ('Experimental baseline using RMS, zero-crossing rate and spectral centroid. '
-                       'Not RIR-based, not verified accuracy, not forensic evidence.'),
+        'model_type': ('experimental_audio_feature_baseline' if variant == 'baseline'
+                       else 'experimental_speech_acoustic_candidate'),
+        'variant': variant,
+        'label': 'fake' if fake >= 0.5 else 'real',
+        'fake_probability': round(fake, 6),
+        'real_probability': round(1.0 - fake, 6),
+        'disclaimer': f'Experimental model using {description}. Not RIR-based, not verified accuracy, not forensic evidence.',
     }
