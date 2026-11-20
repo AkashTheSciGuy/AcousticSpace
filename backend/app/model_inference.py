@@ -5,6 +5,7 @@ speech-acoustic, not RIR-based; neither score is forensic evidence.
 Never load joblib artifacts from untrusted sources.
 """
 import os
+import pickle
 from pathlib import Path
 
 import numpy as np
@@ -49,7 +50,8 @@ def _load_model(path: Path, variant: str = 'baseline'):
     try:
         import joblib
         artifact = joblib.load(path)  # Only operator-created trusted files.
-    except (ImportError, OSError, ValueError, EOFError, KeyError, TypeError) as exc:
+    except (ImportError, OSError, ValueError, EOFError, KeyError, TypeError,
+            IndexError, AttributeError, pickle.UnpicklingError) as exc:
         raise ModelUnavailableError('Model dependencies or artifact are unavailable.') from exc
     expected = EXPECTED_FEATURES if variant == 'baseline' else EXPECTED_FEATURES + EXTRA_FEATURES
     if (not isinstance(artifact, dict)
