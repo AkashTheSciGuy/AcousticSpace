@@ -38,14 +38,14 @@ def extract_split_arrays(dataset_root: Path, manifest: Path):
     examples = {split: [] for split in SPLITS}
     with manifest.open('r', newline='', encoding='utf-8-sig') as handle:
         for row in csv.DictReader(handle):
-            audio = load_audio((root / row['path']).resolve())
+            audio = load_audio((root / row['path'].strip()).resolve())
             base = extract_features(audio)
             acoustics = extract_speech_acoustics(audio)
             values = [float(getattr(base, name)) for name in BASE_FEATURES]
             values.extend(float(getattr(acoustics, name)) for name in EXTRA_FEATURES)
             if not np.isfinite(values).all():
                 raise ValueError(f'Non-finite audio features in {row["path"]}')
-            examples[row['split']].append((values, int(row['label'] == 'fake')))
+            examples[row['split'].strip()].append((values, int(row['label'].strip() == 'fake')))
     return {
         split: (
             np.asarray([item[0] for item in entries], dtype=np.float64),

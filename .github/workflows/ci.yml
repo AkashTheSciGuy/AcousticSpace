@@ -47,3 +47,43 @@ jobs:
         run: npm run build
       - name: Lint frontend
         run: npm run lint
+
+  workflow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: python -m pip install -r backend/requirements-dev.txt -r backend/requirements-ml.txt
+      - run: npm ci
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: npm run test:e2e
+        working-directory: frontend
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t acousticspace:test .
+      - name: Verify container serves UI and API without bundled models
+        run: |
+          docker run -d --name acousticspace -p 8000:8000 acousticspace:test
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/health; then break; fi
+            sleep 2
+          done
+          curl -fsS http://localhost:8000/health
+          curl -fsS http://localhost:8000/ | grep 'id="root"'
+          curl -fsS http://localhost:8000/api/model/status | python -c "import json,sys; assert json.load(sys.stdin)['available'] is False"
+      - if: failure()
+        run: docker logs acousticspace

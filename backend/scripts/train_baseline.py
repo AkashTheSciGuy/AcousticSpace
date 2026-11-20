@@ -35,14 +35,14 @@ def load_manifest_features(dataset: Path, manifest: Path) -> dict[str, tuple[np.
     grouped: dict[str, list[tuple[list[float], int]]] = {'train': [], 'val': [], 'test': []}
     with manifest.open(newline='', encoding='utf-8-sig') as stream:
         for row in csv.DictReader(stream):
-            audio_path = (root / row['path']).resolve()
+            audio_path = (root / row['path'].strip()).resolve()
             audio = load_audio(audio_path)
             features = extract_features(audio)
-            grouped[row['split']].append(([
+            grouped[row['split'].strip()].append(([
                 features.rms_amplitude,
                 features.zero_crossing_rate,
                 features.spectral_centroid_hz,
-            ], int(row['label'] == 'fake')))
+            ], int(row['label'].strip() == 'fake')))
     return {
         split: (np.asarray([item[0] for item in values], dtype=np.float64),
                 np.asarray([item[1] for item in values], dtype=np.int64))

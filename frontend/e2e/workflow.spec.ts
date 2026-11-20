@@ -1,0 +1,98 @@
+import { test, expect } from '@playwright/test'
+import path from 'node:path'
+
+const tone = path.resolve('.e2e/tone.wav')
+const rir = path.resolve('.e2e/rir.wav')
+
+test('inspection, waveform playback and seek, both classifiers, RIR and session history', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.goto('/')
+  await page.getByLabel('Choose a WAV or MP3 audio file').setInputFiles(tone)
+  await expect(page.getByRole('button', { name: 'Play audio' })).toBeEnabled()
+  await page.getByRole('button', { name: 'Play audio' }).click()
+  await expect(page.getByRole('button', { name: 'Pause audio' })).toBeVisible()
+  await page.getByRole('button', { name: 'Pause audio' }).click()
+  await page.getByRole('slider').fill('1')
+  await expect(page.locator('.audio-time')).toContainText('0:01')
+  await page.getByRole('button', { name: 'Inspect recording', exact: true }).click()
+  await expect(page.getByText('Audio inspection complete', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Remove', exact: true }).click()
+  await expect(page.getByRole('slider')).toHaveCount(0)
+  await expect(page.getByText('Trained baseline available', { exact: true })).toBeVisible()
+  await expect(page.getByRole('table', { name: 'test confusion matrix' })).toBeVisible()
+  for (const variant of ['baseline', 'acoustic']) {
+    await page.getByLabel('Prediction model').selectOption(variant)
+    await expect(page.getByRole('button', { name: 'Refresh status', exact: true })).toBeEnabled()
+    await page.getByLabel('Choose recording for baseline classification').setInputFiles(tone)
+    await page.getByRole('button', { name: 'Run experimental prediction', exact: true }).click()
+    await expect(page.locator('.baseline-results')).toContainText('Not RIR-based')
+    await expect(page.locator('.baseline-results')).toContainText('sha256:')
+  }
+  await expect(page.getByRole('region', { name: 'Session prediction history' }).getByRole('listitem')).toHaveCount(2)
+  const rirSection = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Analyze a room impulse response' }) })
+  await rirSection.locator('input[type=file]').setInputFiles(rir)
+  await rirSection.getByRole('button', { name: 'Analyze room acoustics', exact: true }).click()
+  await expect(rirSection).toContainText('RIR measurements')
+  await expect(page.getByRole('table', { name: 'Measured experiment metrics; higher scores do not establish real-world accuracy' })).toBeVisible()
+  await page.getByRole('button', { name: 'Clear history', exact: true }).click()
+  await expect(page.getByText('No predictions in this session.')).toBeVisible()
+  expect(errors).toEqual([])
+})
+
+test('invalid uploads, API failure and retry, mobile layout', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await page.getByLabel('Choose a WAV or MP3 audio file').setInputFiles({ name: 'bad.txt', mimeType: 'text/plain', buffer: Buffer.from('bad') })
+  await expect(page.getByRole('alert').filter({ hasText: 'Unsupported format' })).toBeVisible()
+  await page.getByLabel('Choose a WAV or MP3 audio file').setInputFiles(tone)
+  await page.route('**/api/audio/inspect', route => route.abort())
+  await page.getByRole('button', { name: 'Inspect recording', exact: true }).click()
+  await expect(page.getByText('Could not reach the backend. Check that FastAPI is running.')).toBeVisible()
+  await page.unroute('**/api/audio/inspect')
+  await page.getByRole('button', { name: 'Retry inspection', exact: true }).click()
+  await expect(page.getByText('Audio inspection complete', { exact: true })).toBeVisible()
+  await expect(page.getByText('Trained baseline available', { exact: true })).toBeVisible()
+  await page.getByLabel('Choose recording for baseline classification').setInputFiles(tone)
+  await page.getByRole('button', { name: 'Run experimental prediction', exact: true }).click()
+  await expect(page.locator('.baseline-results')).toContainText('sha256:')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+})
+
+
+test('malformed model status is recoverable and history clears on reload', async ({ page }) => {
+  await page.route('**/api/model/status?*', route => route.fulfill({
+    json: { available: true, variant: 'baseline', model_type: 'test_fixture', message: 'test', evaluation: {} },
+  }))
+  await page.goto('/')
+  await expect(page.getByText('Unexpected model status response.')).toBeVisible()
+  await page.unroute('**/api/model/status?*')
+  await page.getByRole('button', { name: 'Refresh status', exact: true }).click()
+  await expect(page.getByText('Trained baseline available', { exact: true })).toBeVisible()
+  await page.getByLabel('Choose recording for baseline classification').setInputFiles(tone)
+  await page.getByRole('button', { name: 'Run experimental prediction', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Session prediction history' }).getByRole('listitem')).toHaveCount(1)
+  await page.reload()
+  await expect(page.getByText('No predictions in this session.')).toBeVisible()
+})
+
+
+test('changing a file cancels prediction without a stale error', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByText('Trained baseline available', { exact: true })).toBeVisible()
+  await page.getByLabel('Choose recording for baseline classification').setInputFiles(tone)
+  let finish!: () => void
+  const barrier = new Promise<void>(resolve => { finish = resolve })
+  await page.route('**/api/model/predict?*', async route => {
+    await barrier
+    await route.fulfill({ status: 500, json: { detail: 'Old request failed' } }).catch(() => {})
+  })
+  const request = page.waitForRequest('**/api/model/predict?variant=baseline')
+  await page.getByRole('button', { name: 'Run experimental prediction', exact: true }).click()
+  await request
+  await page.getByLabel('Choose recording for baseline classification').setInputFiles(tone)
+  finish()
+  await expect(page.getByRole('button', { name: 'Run experimental prediction', exact: true })).toBeEnabled()
+  await expect(page.getByText('Old request failed')).toHaveCount(0)
+  await expect(page.getByText('Prediction timed out or was cancelled.')).toHaveCount(0)
+})

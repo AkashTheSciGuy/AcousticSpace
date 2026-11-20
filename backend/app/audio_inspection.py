@@ -5,6 +5,7 @@ from tempfile import NamedTemporaryFile
 from typing import Annotated
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
+from starlette.concurrency import run_in_threadpool
 
 from app.audio_validation import CHUNK_SIZE, MAX_FILE_BYTES, _looks_like_audio
 from app.features import extract_features
@@ -46,9 +47,9 @@ async def inspect_audio(
                 temp.write(chunk)
 
         try:
-            audio = load_audio(temporary_path)
-            features = extract_features(audio)
-            speech_acoustics = extract_speech_acoustics(audio)
+            audio = await run_in_threadpool(load_audio, temporary_path)
+            features = await run_in_threadpool(extract_features, audio)
+            speech_acoustics = await run_in_threadpool(extract_speech_acoustics, audio)
         except (ValueError, OSError, RuntimeError) as exc:
             raise HTTPException(422, f"Audio could not be inspected: {exc}") from exc
 

@@ -1,5 +1,6 @@
 # AcousticSpace — Day 20 local research prototype delivery
 
+> Historical user-recorded experiment notes. Original data, model artifacts and report JSON were unavailable for the 20 November audit; these results have not been independently reproduced. See [current verification evidence](../docs/VERIFICATION.md).
 ## Verified experiment (ASVspoof 2019 LA)
 
 The selected dataset manifest contains 700 recordings from 40 declared speaker groups:

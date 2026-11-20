@@ -8,6 +8,8 @@ import json
 import math
 from pathlib import Path
 
+from app.metric_validation import scores_match_matrix
+
 EXPECTED_MODEL_TYPE = 'experimental_logistic_regression_audio_features'
 SPLITS = ('val', 'test')
 SCORES = ('accuracy', 'precision_fake', 'recall_fake', 'f1_fake')
@@ -53,6 +55,8 @@ def read_evaluation(model_file: Path) -> dict | None:
                 any(type(cell) is not int or cell < 0 for cell in row) for row in matrix)):
             return None
         if sum(sum(row) for row in matrix) != n:
+            return None
+        if not scores_match_matrix(clean, matrix):
             return None
         clean['confusion_matrix_real_fake'] = matrix
         cleaned[split] = clean

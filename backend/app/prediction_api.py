@@ -1,9 +1,11 @@
 """Experimental model readiness and audio inference endpoints."""
+from time import perf_counter
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
+from starlette.concurrency import run_in_threadpool
 
 from app.audio_validation import CHUNK_SIZE, MAX_FILE_BYTES, _looks_like_audio
 from app.model_inference import ModelUnavailableError, model_status, predict_audio
@@ -24,9 +26,10 @@ async def predict_uploaded_audio(
     variant: ModelVariant = 'baseline',
 ) -> dict:
     """Use baseline by default; acoustic inference requires a separately trained artifact."""
+    started = perf_counter()
     temp_path: Path | None = None
     try:
-        state = model_status(variant)
+        state = await run_in_threadpool(model_status, variant)
         if not state['available']:
             raise HTTPException(status_code=503, detail=state['message'])
         filename = (file.filename or '').replace('\\', '/').rsplit('/', 1)[-1]
@@ -49,13 +52,14 @@ async def predict_uploaded_audio(
                     raise HTTPException(status_code=413, detail='Audio exceeds the 20 MiB limit.')
                 stream.write(chunk)
         try:
-            audio = load_audio(temp_path)
-            result = predict_audio(audio, variant)
+            audio = await run_in_threadpool(load_audio, temp_path)
+            result = await run_in_threadpool(predict_audio, audio, variant)
         except ModelUnavailableError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         except (ValueError, OSError, RuntimeError) as exc:
             raise HTTPException(status_code=422, detail=f'Audio could not be processed: {exc}') from exc
-        return {'filename': filename, **result}
+        return {'filename': filename, **result,
+                'processing_time_ms': round((perf_counter() - started) * 1000, 3)}
     finally:
         await file.close()
         if temp_path is not None:

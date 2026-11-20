@@ -31,8 +31,31 @@ type Prediction = {
   fake_probability: number
   real_probability: number
   disclaimer: string
+  model_version: string
+  processing_time_ms: number
 }
 const MAX_SIZE = 20 * 1024 * 1024
+
+function isStatus(value: unknown): value is Status {
+  if (!value || typeof value !== 'object') return false
+  const status = value as Partial<Status>
+  if (typeof status.available !== 'boolean' || typeof status.message !== 'string' ||
+      typeof status.model_type !== 'string' || !['baseline', 'acoustic'].includes(status.variant ?? '')) return false
+  if (status.evaluation === undefined) return true
+  const evaluation = status.evaluation
+  if (!evaluation || evaluation.source !== 'local_training_report' ||
+      typeof evaluation.warning !== 'string' || !evaluation.metrics) return false
+  return (['val', 'test'] as const).every(split => {
+    const metric = evaluation.metrics[split]
+    if (!metric || !Number.isInteger(metric.samples) || metric.samples < 1) return false
+    const matrix = metric.confusion_matrix_real_fake
+    return (['accuracy', 'precision_fake', 'recall_fake', 'f1_fake'] as const).every(
+      key => Number.isFinite(metric[key]) && metric[key] >= 0 && metric[key] <= 1,
+    ) && Array.isArray(matrix) && matrix.length === 2 && matrix.every(
+      row => Array.isArray(row) && row.length === 2 && row.every(cell => Number.isInteger(cell) && cell >= 0),
+    ) && matrix.flat().reduce((total, cell) => total + cell, 0) === metric.samples
+  })
+}
 
 export default function BaselineClassifier() {
   const [variant, setVariant] = useState<ModelVariant>('baseline')
@@ -43,6 +66,8 @@ export default function BaselineClassifier() {
   const [result, setResult] = useState<Prediction | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // Memory only: no audio or results survive a page reload.
+  const [history, setHistory] = useState<Prediction[]>([])
   const controllerRef = useRef<AbortController | null>(null)
 
   async function refreshStatus(controller: AbortController, selectedVariant: ModelVariant): Promise<void> {
@@ -50,25 +75,25 @@ export default function BaselineClassifier() {
     statusControllerRef.current = controller
     controllerRef.current?.abort()
     controllerRef.current = null
-    setBusy(false)
-    setStatusLoading(true)
+    const timeout = window.setTimeout(() => controller.abort(), 15000)
     try {
       const response = await fetch(`/api/model/status?variant=${selectedVariant}`, { signal: controller.signal })
       if (!response.ok) throw new Error(`Model status unavailable (HTTP ${response.status}).`)
       const data: unknown = await response.json()
-      if (!data || typeof data !== 'object' || typeof (data as Status).available !== 'boolean' ||
-          typeof (data as Status).message !== 'string') throw new Error('Unexpected model status response.')
+      if (!isStatus(data) || data.variant !== selectedVariant) throw new Error('Unexpected model status response.')
       if (!controller.signal.aborted) {
         setStatus(data as Status)
         setResult(null)
         setError(null)
       }
     } catch (cause: unknown) {
-      if (!controller.signal.aborted) {
+      if (statusControllerRef.current === controller) {
         setStatus(null)
-        setError(cause instanceof Error ? cause.message : 'Cannot reach model API.')
+        setError(controller.signal.aborted ? 'Model status request timed out. Retry status.'
+          : cause instanceof Error ? cause.message : 'Cannot reach model API.')
       }
     } finally {
+      window.clearTimeout(timeout)
       if (statusControllerRef.current === controller) {
         setStatusLoading(false)
         statusControllerRef.current = null
@@ -78,13 +103,12 @@ export default function BaselineClassifier() {
 
   useEffect(() => {
     const controller = new AbortController()
-    setStatus(null)
-    setBusy(false)
-    setFile(null)
-    setResult(null)
-    setError(null)
+    // Fetch synchronizes this component with the API; state updates occur after await.
+    // eslint-disable-next-line react/set-state-in-effect
     void refreshStatus(controller, variant)
     return () => {
+      statusControllerRef.current?.abort()
+      statusControllerRef.current = null
       controller.abort()
       controllerRef.current?.abort()
       controllerRef.current = null
@@ -126,8 +150,16 @@ export default function BaselineClassifier() {
       const prediction = data as Prediction
       if (prediction.status !== 'predicted' || prediction.variant !== variant || !['real', 'fake'].includes(prediction.label) ||
           !Number.isFinite(prediction.fake_probability) || !Number.isFinite(prediction.real_probability) ||
+          prediction.fake_probability < 0 || prediction.fake_probability > 1 ||
+          prediction.real_probability < 0 || prediction.real_probability > 1 ||
+          Math.abs(prediction.fake_probability + prediction.real_probability - 1) > 1e-5 ||
+          typeof prediction.filename !== 'string' || typeof prediction.model_version !== 'string' ||
+          !Number.isFinite(prediction.processing_time_ms) || prediction.processing_time_ms < 0 ||
           typeof prediction.disclaimer !== 'string') throw new Error('Unexpected prediction response.')
-      if (!controller.signal.aborted) setResult(prediction)
+      if (!controller.signal.aborted && controllerRef.current === controller) {
+        setResult(prediction)
+        setHistory((previous) => [prediction, ...previous].slice(0, 20))
+      }
     } catch (cause) {
       if (controllerRef.current !== controller) return
       if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : 'Prediction failed.')
@@ -145,8 +177,14 @@ export default function BaselineClassifier() {
     <label className="baseline-variant-label" htmlFor="baseline-variant">Prediction model</label>
     <select id="baseline-variant" className="baseline-variant" value={variant}
       onChange={(event) => {
+        if (event.target.value === variant) return
         controllerRef.current?.abort()
         controllerRef.current = null
+        statusControllerRef.current?.abort()
+        statusControllerRef.current = null
+        setResult(null)
+        setError(null)
+        setFile(null)
         setStatus(null)
         setBusy(false)
         setStatusLoading(true)
@@ -161,7 +199,13 @@ export default function BaselineClassifier() {
           : statusLoading ? 'Checking model availability…' : 'Model status could not be loaded.'}
       </p>
       <button type="button" className="baseline-refresh" disabled={statusLoading}
-        onClick={() => { void refreshStatus(new AbortController(), variant) }}>
+        onClick={() => {
+          setBusy(false)
+          setStatusLoading(true)
+          setResult(null)
+          setError(null)
+          void refreshStatus(new AbortController(), variant)
+        }}>
         {statusLoading ? 'Checking…' : 'Refresh status'}
       </button>
     </div>
@@ -229,8 +273,20 @@ export default function BaselineClassifier() {
     {result && <div className="baseline-results" role="status">
       <strong>{result.variant === 'acoustic' ? 'Six-feature candidate' : 'Three-feature baseline'} prediction: {result.label.toUpperCase()}</strong>
       <p>Model fake-class score: {(result.fake_probability * 100).toFixed(1)}%</p>
+      <p>Server processing: {result.processing_time_ms.toFixed(1)} ms</p>
+      <small>Model artifact: {result.model_version}</small>
       <small>{result.disclaimer}</small>
     </div>}
+    <section aria-labelledby="history-title">
+      <h3 id="history-title">Session prediction history</h3>
+      <p>Last 20 successful predictions in this page only. Audio is not retained. Reloading clears history.</p>
+      {history.length === 0 ? <p>No predictions in this session.</p> : <>
+        <button type="button" onClick={() => setHistory([])}>Clear history</button>
+        <ol>{history.map((entry, index) => <li key={`${entry.model_version}-${index}`}>
+          <strong>{entry.filename}</strong> · {entry.variant} · {entry.label} · fake-class score {(entry.fake_probability * 100).toFixed(1)}% · {entry.processing_time_ms.toFixed(1)} ms
+        </li>)}</ol>
+      </>}
+    </section>
     <small>Class scores are not calibrated confidence estimates. The six-feature candidate is not a measured RIR model. Only trained local models produce predictions.</small>
   </section>
 }

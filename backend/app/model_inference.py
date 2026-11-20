@@ -4,6 +4,7 @@ The default baseline remains unchanged. The opt-in six-feature candidate is
 speech-acoustic, not RIR-based; neither score is forensic evidence.
 Never load joblib artifacts from untrusted sources.
 """
+import hashlib
 import os
 import pickle
 from pathlib import Path
@@ -55,6 +56,8 @@ def _load_model(path: Path, variant: str = 'baseline'):
         raise ModelUnavailableError('Model dependencies or artifact are unavailable.') from exc
     expected = EXPECTED_FEATURES if variant == 'baseline' else EXPECTED_FEATURES + EXTRA_FEATURES
     if (not isinstance(artifact, dict)
+            or not isinstance(artifact.get('features'), (list, tuple))
+            or not isinstance(artifact.get('labels'), (list, tuple))
             or tuple(artifact.get('features', ())) != expected
             or tuple(artifact.get('labels', ())) != EXPECTED_LABELS):
         raise ModelUnavailableError('Incompatible model artifact for the selected variant.')
@@ -64,7 +67,15 @@ def _load_model(path: Path, variant: str = 'baseline'):
     classes = np.asarray(pipeline.classes_)
     if classes.shape != (2,) or set(classes.tolist()) != {0, 1}:
         raise ModelUnavailableError('Model classes do not match real=0 and fake=1.')
+    if getattr(pipeline, 'n_features_in_', None) != len(expected):
+        raise ModelUnavailableError('Model input width does not match its declared features.')
     return pipeline
+
+
+def model_version(path: Path) -> str:
+    """Content identity of a trusted artifact, not an accuracy certification."""
+    with path.open('rb') as stream:
+        return 'sha256:' + hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
 def model_status(variant: str = 'baseline') -> dict:
@@ -76,7 +87,7 @@ def model_status(variant: str = 'baseline') -> dict:
         _load_model(path, variant)
     except ModelUnavailableError as exc:
         return {'available': False, 'model_type': model_type, 'variant': variant, 'message': str(exc)}
-    result = {'available': True, 'model_type': model_type, 'variant': variant,
+    result = {'model_version': model_version(path), 'available': True, 'model_type': model_type, 'variant': variant,
               'message': 'Experimental model installed; performance is dataset-dependent.'}
     # The original baseline has its own exact sidecar report. Candidate results
     # are shown in the separately verified /api/model/comparison endpoint.
@@ -111,6 +122,7 @@ def predict_audio(audio: PreprocessedAudio, variant: str = 'baseline') -> dict:
                    else 'three baseline and three exploratory speech-acoustic features')
     return {
         'status': 'predicted',
+        'model_version': model_version(model_path(variant)),
         'model_type': ('experimental_audio_feature_baseline' if variant == 'baseline'
                        else 'experimental_speech_acoustic_candidate'),
         'variant': variant,
