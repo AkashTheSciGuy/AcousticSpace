@@ -6,7 +6,7 @@ Audit date: 20 November 2026. Reference: **AcousticSpace Workflow.docx** in the 
 | --- | --- | --- |
 | Python/FastAPI and reproducible setup | Application routes, pytest suite, Windows instructions, Python 3.12 CI | Dependencies use ranges; existing pickle/joblib models require compatible training dependencies |
 | Labeled real/fake dataset, held-out evaluation | ASVspoof LA importer; hash, declared source-group separation and both-class checks; baseline/candidate training and evaluation scripts | No dataset, manifest, original trained artifacts or original experiment reports were available in this checkout; source truth and cross-dataset generalization unverified |
-| Librosa preprocessing and acoustic features | Shared 16 kHz mono decoding and feature extraction used for training/inference | WAV/MP3 uploads; FLAC offline only; 20 MiB/60 s limits; waveform may preview a longer local file before server rejection |
+| Librosa preprocessing and acoustic features | Shared 16 kHz mono decoding and feature extraction used for training/inference | WAV/MP3 uploads; FLAC offline only; 20 MiB/60 s limits; no exported spectrogram/log-mel neural-model input pipeline; waveform may preview a longer local file before server rejection |
 | CNN/Transformer baseline | Three-feature standardized logistic regression | CNN/Transformer baseline is **not implemented**; logistic regression is a smaller experimental substitute |
 | Hugging Face AST and PyTorch fine-tuning | No such training/inference path | Requires suitable dataset, compute, reproducible experiments and independent evaluation; not safe to substitute invented results |
 | RIR/environmental reverberation investigation | Separate isolated-RIR endpoint: T20-derived RT60, C50, approximate DRR, synthetic decay regression tests | No RIR reconstruction from speech and no RIR-based deepfake detector; analyzer assumes caller supplies an actual RIR, cannot authenticate input type; operates after 16 kHz resampling |
@@ -17,7 +17,7 @@ Audit date: 20 November 2026. Reference: **AcousticSpace Workflow.docx** in the 
 | History | Latest 20 successful predictions kept in React memory; clear control | Page-session only; reload/tab close clears it; no audio retention, database or cross-device history |
 | Responsive/accessibility testing | Semantic controls, labels and responsive CSS; browser regression suite | Automated Chromium checks cover selected flows, not a full accessibility or cross-browser certification |
 | Docker and CI/CD | Multi-stage single-origin frontend/backend image; non-root process; read-only model mount; healthcheck; backend/frontend/browser/container CI jobs | No public deployment, TLS, authentication, global request-body/concurrency quotas, rate limits or production observability. Local research use only; CI is validation, not automatic production delivery |
-| Architecture, API, evaluation, limitations and demo | README, API contract, this audit, verification report, existing dataset/experiment guides | Original numerical results remain historical self-reported claims until source artifacts/data can be rerun |
+| Architecture, API, evaluation, limitations and demo | README, API contract, this audit, verification report, existing dataset/experiment guides | Original numerical results remain historical self-reported claims until source artifacts/data can be rerun; no final presentation or screenshot pack produced by this code audit |
 
 ## Research interpretation
 
