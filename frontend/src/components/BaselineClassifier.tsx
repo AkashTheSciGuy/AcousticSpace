@@ -76,6 +76,7 @@ export default function BaselineClassifier() {
   useEffect(() => {
     const controller = new AbortController()
     setStatus(null)
+    setBusy(false)
     setFile(null)
     setResult(null)
     setError(null)
@@ -118,7 +119,7 @@ export default function BaselineClassifier() {
       }
       if (!data || typeof data !== 'object') throw new Error('Invalid model response.')
       const prediction = data as Prediction
-      if (prediction.status !== 'predicted' || !['real', 'fake'].includes(prediction.label) ||
+      if (prediction.status !== 'predicted' || prediction.variant !== variant || !['real', 'fake'].includes(prediction.label) ||
           !Number.isFinite(prediction.fake_probability) || !Number.isFinite(prediction.real_probability) ||
           typeof prediction.disclaimer !== 'string') throw new Error('Unexpected prediction response.')
       if (!controller.signal.aborted) setResult(prediction)
@@ -213,7 +214,7 @@ export default function BaselineClassifier() {
     {file && <p>Selected: {file.name}</p>}
     {error && <p role="alert" className="baseline-error">{error}</p>}
     {result && <div className="baseline-results" role="status">
-      <strong>Experimental prediction: {result.label.toUpperCase()}</strong>
+      <strong>{result.variant === 'acoustic' ? 'Six-feature candidate' : 'Three-feature baseline'} prediction: {result.label.toUpperCase()}</strong>
       <p>Model fake-class score: {(result.fake_probability * 100).toFixed(1)}%</p>
       <small>{result.disclaimer}</small>
     </div>}
