@@ -8,7 +8,7 @@ const pipelineSteps = [
   { number: '01', title: 'Audio intake', description: 'Choose and validate a recording.', status: 'Working' },
   { number: '02', title: 'Waveform preview', description: 'Visualize the selected audio.', status: 'Working' },
   { number: '03', title: 'Acoustic analysis', description: 'Measure audio features and analyze an uploaded RIR.', status: 'Working' },
-  { number: '04', title: 'Baseline inference', description: 'Model API is integrated; training on labeled data is required.', status: 'In progress' },
+  { number: '04', title: 'Experimental inference', description: 'Baseline and optional speech-acoustic candidate trained locally; model artifacts required on each device.', status: 'Working' },
 ] as const
 
 function App() {
@@ -31,14 +31,14 @@ function App() {
         </div>
         <div className="sidebar-footer">
           <span className="environment-dot" aria-hidden="true" />
-          Frontend prototype
-          <small>Experimental model inference requires a trained artifact</small>
+          Local research prototype
+          <small>Trained model artifacts are stored locally, not in GitHub</small>
         </div>
       </aside>
       <main className="main-content">
         <header className="topbar">
           <span>AcousticSpace / Dashboard</span>
-          <span className="version">Prototype v0.2</span>
+          <span className="version">Research prototype · Day 20</span>
         </header>
         <section className="intro" aria-labelledby="page-title">
           <div className="eyebrow"><span aria-hidden="true" /> AUDIO FORENSICS</div>
@@ -61,7 +61,7 @@ function App() {
           <article className="info-card">
             <div className="info-card-icon" aria-hidden="true">02</div>
             <h2>Explainable results</h2>
-            <p>Predictions and confidence will appear only when a trained model is integrated and evaluated against held-out data.</p>
+            <p>Local experimental predictions are available for trained models. Class scores are not calibrated confidence and do not establish forensic authenticity.</p>
           </article>
         </section>
       </main>
