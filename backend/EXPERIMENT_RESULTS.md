@@ -1,5 +1,6 @@
 # Experimental Baseline — Initial ASVspoof 2019 LA Run
 
+> Historical user-recorded experiment notes. Original data, model artifacts and report JSON were unavailable for the 20 November audit; these results have not been independently reproduced. See [current verification evidence](../docs/VERIFICATION.md).
 **Date:** November 15, 2026  
 **Project:** AcousticSpace  
 **Status:** Local baseline trained and verified through FastAPI and the frontend

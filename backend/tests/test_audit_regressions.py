@@ -81,3 +81,18 @@ def test_all_api_routes_with_synthetic_model_fixtures(tmp_path, monkeypatch):
     response = client.post('/api/rir/analyze', files={'file': ('rir.wav', (tmp_path / 'rir.wav').read_bytes())})
     assert response.status_code == 200, response.text
     assert response.json()['metrics']['rt60_t20_seconds'] == pytest.approx(0.5, abs=0.05)
+
+
+def test_release_preflight_runs_both_models_on_supplied_audio(tmp_path, monkeypatch):
+    from scripts.create_e2e_fixtures import create
+    from scripts.verify_release import check_release
+    create(tmp_path)
+    monkeypatch.setenv('ACOUSTICSPACE_BASELINE_MODEL', str(tmp_path / 'baseline.joblib'))
+    monkeypatch.setenv('ACOUSTICSPACE_ACOUSTIC_MODEL', str(tmp_path / 'acoustic.joblib'))
+    monkeypatch.setenv('ACOUSTICSPACE_COMPARISON_REPORT', str(tmp_path / 'comparison.json'))
+    (tmp_path / 'baseline.json').write_text(json.dumps(valid_report()))
+    result = check_release(tmp_path / 'tone.wav')
+    assert result['status'] == 'ready_for_local_demo'
+    for variant in ('baseline', 'acoustic'):
+        assert result['checks'][f'{variant}_inference_smoke'] is True
+        assert result['inference_smoke'][variant]['model_version'].startswith('sha256:')

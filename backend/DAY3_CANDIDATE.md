@@ -1,5 +1,6 @@
 # AcousticSpace Day 3 — optional six-feature candidate
 
+> Historical user-recorded experiment notes. Original data, model artifacts and report JSON were unavailable for the 20 November audit; these results have not been independently reproduced. See [current verification evidence](../docs/VERIFICATION.md).
 The original three-feature baseline remains the default for `/api/model/status` and `/api/model/predict`.
 Day 3 adds an **opt-in**, separately trained six-feature speech-acoustic candidate. Neither model is an RIR estimator or a forensic tool.
 

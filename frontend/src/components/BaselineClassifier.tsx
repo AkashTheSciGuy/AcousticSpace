@@ -36,6 +36,27 @@ type Prediction = {
 }
 const MAX_SIZE = 20 * 1024 * 1024
 
+function isStatus(value: unknown): value is Status {
+  if (!value || typeof value !== 'object') return false
+  const status = value as Partial<Status>
+  if (typeof status.available !== 'boolean' || typeof status.message !== 'string' ||
+      typeof status.model_type !== 'string' || !['baseline', 'acoustic'].includes(status.variant ?? '')) return false
+  if (status.evaluation === undefined) return true
+  const evaluation = status.evaluation
+  if (!evaluation || evaluation.source !== 'local_training_report' ||
+      typeof evaluation.warning !== 'string' || !evaluation.metrics) return false
+  return (['val', 'test'] as const).every(split => {
+    const metric = evaluation.metrics[split]
+    if (!metric || !Number.isInteger(metric.samples) || metric.samples < 1) return false
+    const matrix = metric.confusion_matrix_real_fake
+    return (['accuracy', 'precision_fake', 'recall_fake', 'f1_fake'] as const).every(
+      key => Number.isFinite(metric[key]) && metric[key] >= 0 && metric[key] <= 1,
+    ) && Array.isArray(matrix) && matrix.length === 2 && matrix.every(
+      row => Array.isArray(row) && row.length === 2 && row.every(cell => Number.isInteger(cell) && cell >= 0),
+    ) && matrix.flat().reduce((total, cell) => total + cell, 0) === metric.samples
+  })
+}
+
 export default function BaselineClassifier() {
   const [variant, setVariant] = useState<ModelVariant>('baseline')
   const [status, setStatus] = useState<Status | null>(null)
@@ -59,8 +80,7 @@ export default function BaselineClassifier() {
       const response = await fetch(`/api/model/status?variant=${selectedVariant}`, { signal: controller.signal })
       if (!response.ok) throw new Error(`Model status unavailable (HTTP ${response.status}).`)
       const data: unknown = await response.json()
-      if (!data || typeof data !== 'object' || typeof (data as Status).available !== 'boolean' ||
-          typeof (data as Status).message !== 'string') throw new Error('Unexpected model status response.')
+      if (!isStatus(data) || data.variant !== selectedVariant) throw new Error('Unexpected model status response.')
       if (!controller.signal.aborted) {
         setStatus(data as Status)
         setResult(null)
