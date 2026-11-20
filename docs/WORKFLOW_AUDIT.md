@@ -35,6 +35,8 @@ Reported historical baseline/candidate numbers must not be relabeled AST, CNN, R
 4. Malformed optional evaluation metadata could crash the prediction panel. Validate the full status/evaluation shape before rendering and show a recoverable error instead.
 5. CPU-bound decode/feature/inference calls in async upload handlers occupied the event loop. They now run in the server thread pool. This improves responsiveness, but does not establish a concurrency capacity guarantee.
 
+6. Training preflight trimmed CSV paths/labels/splits, but both training pipelines consumed untrimmed values, failing after a successful preflight (or misreading padded labels). Both feature loaders now use the same trimming; regression tests train both variants from padded synthetic manifests.
+
 ## Required work before any research-complete claim
 
 Provide the original trusted model files, their dependency versions, manifests, source recordings and evaluation JSON. Run the release preflight with a real clip and independently rerun held-out evaluations without using those results to tune. For the original RIR/AST objective, define and validate a speech-to-room-feature method, implement neural baselines and AST experiments, and report failure cases with suitable controls. Breathing/alignment and segment localization require separate experimental evidence. These cannot be responsibly completed by relabeling the present features. There is also no voice-activity gate, out-of-distribution detector, abstention policy or calibrated confidence; silence, music and unsupported recording conditions can still receive meaningless class scores.

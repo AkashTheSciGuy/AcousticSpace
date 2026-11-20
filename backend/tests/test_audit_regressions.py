@@ -96,3 +96,31 @@ def test_release_preflight_runs_both_models_on_supplied_audio(tmp_path, monkeypa
     for variant in ('baseline', 'acoustic'):
         assert result['checks'][f'{variant}_inference_smoke'] is True
         assert result['inference_smoke'][variant]['model_version'].startswith('sha256:')
+
+
+@pytest.mark.parametrize('variant', ['baseline', 'acoustic'])
+def test_training_uses_same_normalization_as_manifest_validation(tmp_path, variant):
+    """Whitespace accepted by preflight must not fail training or flip labels."""
+    import csv
+    import hashlib
+    import soundfile as sf
+    from scripts.train_baseline import train as train_baseline
+    from scripts.train_acoustic_candidate import train as train_candidate
+    rows = []
+    pairs = [(split, label) for split in ('train', 'val', 'test') for label in ('real', 'fake')]
+    for index, (split, label) in enumerate(pairs):
+        path = tmp_path / f'{index}.wav'
+        t = np.arange(4000) / 16000
+        sf.write(path, 0.2 * np.sin(2 * np.pi * (200 + index * 100) * t), 16000)
+        rows.append({'path': f' {path.name} ', 'label': f' {label} ', 'split': f' {split} ',
+                     'group': split, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()})
+    manifest = tmp_path / 'manifest.csv'
+    with manifest.open('w', newline='') as stream:
+        writer = csv.DictWriter(stream, fieldnames=rows[0].keys())
+        writer.writeheader()
+        writer.writerows(rows)
+    output = tmp_path / f'{variant}.joblib'
+    (train_baseline if variant == 'baseline' else train_candidate)(tmp_path, manifest, output)
+    artifact = joblib.load(output)
+    assert artifact['pipeline'].classes_.tolist() == [0, 1]
+    assert artifact['pipeline'].n_features_in_ == (3 if variant == 'baseline' else 6)

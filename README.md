@@ -10,7 +10,7 @@
 - WAV/MP3 file upload validation (up to 20 MiB) and audio inspection (up to 60 seconds).
 - RMS, zero-crossing rate, spectral centroid, spectral flatness, energy variation and spectral flux.
 - Isolated RIR analysis: T20-derived RT60, clarity C50 and approximate direct/reverberant energy ratio.
-- Trained local baseline and opt-in six-feature experimental candidate, both served through FastAPI.
+- FastAPI inference for a locally trained baseline and opt-in six-feature experimental candidate; trusted model artifacts must be supplied separately.
 - Validation/test metric reports, confusion matrices and the feature comparison dashboard.
 - Artifact hash and server processing time on predictions; last 20 successful predictions in page-memory history.
 - Single-origin Docker setup and backend/frontend/browser/container CI checks.
@@ -67,9 +67,9 @@ This was a within-dataset exploratory comparison. The official evaluation partit
 
 ## What is not implemented
 
-The original project workflow proposed an AST/CNN model, PyTorch fine-tuning, breathing/cadence analysis, suspicious segment localization and deployment. Page-session prediction history, a Docker setup and CI validation are now implemented; no production deployment is claimed. **Those should not be presented as completed features.** This repository currently has an experimental speech-based classifier and a **separate** RIR analyzer; it does not reconstruct RIR from a speech clip.
+The original workflow’s AST/CNN model, PyTorch fine-tuning, breathing/cadence analysis, suspicious segment localization and production deployment remain unimplemented. Page-session prediction history, a Docker setup and CI validation are now implemented. This repository currently has an experimental speech-based classifier and a **separate** RIR analyzer; it does not reconstruct RIR from a speech clip.
 
-See [backend/DAY20_DELIVERY.md](backend/DAY20_DELIVERY.md) for the final local demo checklist. GitHub Actions runs backend tests and frontend checks on new pull requests.
+See [backend/DAY20_DELIVERY.md](backend/DAY20_DELIVERY.md) for the final local demo checklist. GitHub Actions runs backend tests, frontend build/lint, browser workflows and a Docker smoke check on new pull requests.
 
 ## Audit and verification
 

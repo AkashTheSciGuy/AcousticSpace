@@ -26,7 +26,7 @@ Then run the frontend:
 
 ```cmd
 cd /d F:\Projects\AcousticSpace\frontend
-npm.cmd install
+npm.cmd ci
 npm.cmd run dev
 ```
 
@@ -36,6 +36,7 @@ To verify the frontend production build:
 
 ```cmd
 npm.cmd run build
+npm.cmd run lint
 ```
 
 ## Baseline integration checkpoint — November 15, 2026
@@ -43,3 +44,7 @@ npm.cmd run build
 The locally trained baseline was confirmed available through `GET /api/model/status` (HTTP 200), and the frontend's baseline prediction flow was manually verified with a recording. The local ASVspoof 2019 LA experiment used 400 training, 140 validation, and 160 test recordings. Its validation accuracy was 75.71%, and test accuracy was 70.63%. These are **dataset-specific experimental measurements**, not general real-world detection accuracy. Neither the dataset nor the trained model is shipped in this repository.
 
 For dataset preparation and training, see `backend/DATASET_TRAINING.md` in the repository root.
+
+## Current audit additions
+
+Both the three-feature baseline and six-feature speech-acoustic candidate are supported. Successful predictions include artifact identity and server processing time, with the latest 20 results kept only in page memory. See [workflow audit](../docs/WORKFLOW_AUDIT.md), [API contract](../docs/API_CONTRACT.md), [architecture](../docs/ARCHITECTURE.md), and [verification evidence/browser test instructions](../docs/VERIFICATION.md). The November 15 checkpoint above is historical and was not independently reproduced by the current audit.

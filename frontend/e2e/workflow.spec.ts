@@ -20,6 +20,7 @@ test('inspection, waveform playback and seek, both classifiers, RIR and session 
   await page.getByRole('button', { name: 'Remove', exact: true }).click()
   await expect(page.getByRole('slider')).toHaveCount(0)
   await expect(page.getByText('Trained baseline available', { exact: true })).toBeVisible()
+  await expect(page.getByRole('table', { name: 'test confusion matrix' })).toBeVisible()
   for (const variant of ['baseline', 'acoustic']) {
     await page.getByLabel('Prediction model').selectOption(variant)
     await expect(page.getByRole('button', { name: 'Refresh status', exact: true })).toBeEnabled()

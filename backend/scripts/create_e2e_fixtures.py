@@ -34,6 +34,10 @@ def create(output: Path):
     metric = {'samples': 2, 'accuracy': 0.5, 'precision_fake': 0.0,
               'recall_fake': 0.0, 'f1_fake': 0.0, 'confusion_matrix_real_fake': [[1, 0], [1, 0]]}
     # Made-up fixture counts only: never a research evaluation.
+    (output / 'baseline.json').write_text(json.dumps({
+        'model_type': 'experimental_logistic_regression_audio_features',
+        'metrics': {'val': metric, 'test': metric},
+    }))
     (output / 'comparison.json').write_text(json.dumps({
         'experiment': 'speech_acoustics_feature_ablation_v1',
         'recordings': {'train': 20, 'val': 2, 'test': 2},

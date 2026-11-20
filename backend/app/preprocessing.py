@@ -39,7 +39,7 @@ def load_audio(
     own stricter format validation and remain WAV/MP3-only.
 
     Raises:
-        ValueError: invalid settings, unsupported format, silent/empty input,
+        ValueError: invalid settings, unsupported format, empty/nonfinite input,
             or duration beyond the configured limit.
         OSError: file missing, unreadable, or not a decodable audio recording.
     """
