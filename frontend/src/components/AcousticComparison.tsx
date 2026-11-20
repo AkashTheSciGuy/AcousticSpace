@@ -47,7 +47,7 @@ export default function AcousticComparison() {
   async function loadReport(controller: AbortController): Promise<void> {
     controllerRef.current?.abort()
     controllerRef.current = controller
-    setState('loading')
+    const timeout = window.setTimeout(() => controller.abort(), 15000)
     try {
       const response = await fetch('/api/model/comparison', { signal: controller.signal })
       if (response.status === 404) {
@@ -59,16 +59,22 @@ export default function AcousticComparison() {
       if (!validComparison(data)) throw new Error('Invalid comparison report')
       if (!controller.signal.aborted) { setReport(data); setState('ready') }
     } catch {
-      if (!controller.signal.aborted) { setReport(null); setState('error') }
+      if (controllerRef.current === controller) { setReport(null); setState('error') }
     } finally {
+      window.clearTimeout(timeout)
       if (controllerRef.current === controller) controllerRef.current = null
     }
   }
 
   useEffect(() => {
     const controller = new AbortController()
+    // Fetch synchronizes this component with the API; state updates occur after await.
+    // eslint-disable-next-line react/set-state-in-effect
     void loadReport(controller)
-    return () => controller.abort()
+    return () => {
+      if (controllerRef.current === controller) controllerRef.current = null
+      controller.abort()
+    }
   }, [])
 
   return (
@@ -79,7 +85,7 @@ export default function AcousticComparison() {
           <h2 id="acoustic-compare-title">Feature comparison</h2>
         </div>
         <button type="button" disabled={state === 'loading'}
-          onClick={() => { void loadReport(new AbortController()) }}>
+          onClick={() => { setState('loading'); void loadReport(new AbortController()) }}>
           {state === 'loading' ? 'Loading…' : 'Refresh comparison'}
         </button>
       </div>

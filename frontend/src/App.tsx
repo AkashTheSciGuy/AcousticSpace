@@ -44,8 +44,8 @@ function App() {
           <div className="eyebrow"><span aria-hidden="true" /> AUDIO FORENSICS</div>
           <h1 id="page-title">Analyze the space behind the sound.</h1>
           <p>
-            AcousticSpace explores whether a voice recording's acoustic environment
-            contains evidence of manipulation. Start by selecting an audio file.
+            Inspect speech features, run experimental speech-acoustic classifiers, or analyze
+            a separately measured room impulse response. These classifiers do not estimate RIR.
           </p>
         </section>
         <AudioUpload />

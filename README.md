@@ -12,6 +12,8 @@
 - Isolated RIR analysis: T20-derived RT60, clarity C50 and approximate direct/reverberant energy ratio.
 - Trained local baseline and opt-in six-feature experimental candidate, both served through FastAPI.
 - Validation/test metric reports, confusion matrices and the feature comparison dashboard.
+- Artifact hash and server processing time on predictions; last 20 successful predictions in page-memory history.
+- Single-origin Docker setup and backend/frontend/browser/container CI checks.
 
 ## Start locally (Windows CMD)
 
@@ -33,6 +35,7 @@ Open API docs at http://localhost:8000/docs .
 cd /d F:\Projects\AcousticSpace\frontend
 npm ci
 npm run build
+npm run lint
 npm run dev
 ```
 
@@ -52,7 +55,7 @@ The `backend/models/` directory contains generated artifacts and reports. **Do n
 
 ## Experimental evaluation
 
-The recorded local ASVspoof 2019 LA subset contained **400 train / 140 validation / 160 test recordings**.
+**Historical, self-reported results (original artifacts/data unavailable in this checkout; not reproduced by the current audit).** The recorded local ASVspoof 2019 LA subset contained **400 train / 140 validation / 160 test recordings**.
 
 | Test-set measure | Three-feature baseline | Six-feature candidate |
 | --- | ---: | ---: |
@@ -64,6 +67,10 @@ This was a within-dataset exploratory comparison. The official evaluation partit
 
 ## What is not implemented
 
-The original project workflow proposed an AST/CNN model, PyTorch fine-tuning, breathing/cadence analysis, suspicious segment localization, analysis history, Docker and CI/CD deployment. **Those should not be presented as completed features.** This repository currently has an experimental speech-based classifier and a **separate** RIR analyzer; it does not reconstruct RIR from a speech clip.
+The original project workflow proposed an AST/CNN model, PyTorch fine-tuning, breathing/cadence analysis, suspicious segment localization and deployment. Page-session prediction history, a Docker setup and CI validation are now implemented; no production deployment is claimed. **Those should not be presented as completed features.** This repository currently has an experimental speech-based classifier and a **separate** RIR analyzer; it does not reconstruct RIR from a speech clip.
 
 See [backend/DAY20_DELIVERY.md](backend/DAY20_DELIVERY.md) for the final local demo checklist. GitHub Actions runs backend tests and frontend checks on new pull requests.
+
+## Audit and verification
+
+See [workflow comparison and remaining research requirements](docs/WORKFLOW_AUDIT.md), [API/deployment contract](docs/API_CONTRACT.md) and [verification evidence and reproducible checks](docs/VERIFICATION.md). The browser suite uses synthetic test fixtures, not the original research models.

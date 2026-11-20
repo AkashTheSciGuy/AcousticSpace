@@ -1,8 +1,11 @@
 """Read a local, self-generated acoustic feature ablation report; never execute model files."""
 
 import json
+import os
 import math
 from pathlib import Path
+
+from app.metric_validation import scores_match_matrix
 
 from fastapi import APIRouter, HTTPException
 
@@ -13,8 +16,9 @@ SPLITS = ('val', 'test')
 SCORES = ('accuracy', 'precision_fake', 'recall_fake', 'f1_fake')
 
 
-def read_comparison(path: Path = REPORT_PATH) -> dict | None:
+def read_comparison(path: Path | None = None) -> dict | None:
     """Ignore missing/malformed/oversized reports rather than displaying misleading metrics."""
+    path = path if path is not None else Path(os.getenv('ACOUSTICSPACE_COMPARISON_REPORT', str(REPORT_PATH)))
     try:
         if not path.is_file() or path.stat().st_size > 64 * 1024:
             return None
@@ -51,6 +55,8 @@ def read_comparison(path: Path = REPORT_PATH) -> dict | None:
                 any(not isinstance(row, list) or len(row) != 2 or
                     any(type(cell) is not int or cell < 0 for cell in row) for row in matrix) or
                 sum(sum(row) for row in matrix) != recordings[split]):
+                return None
+            if not scores_match_matrix(scores, matrix):
                 return None
             metrics[split] = {'samples': recordings[split], **scores, 'confusion_matrix_real_fake': matrix}
         cleaned[name] = {'metrics': metrics}

@@ -13,3 +13,14 @@ __pycache__/
 backend/models/
 *.joblib
 datasets/
+
+# Offline recordings and training manifests must stay off Git.
+*.wav
+*.mp3
+*.flac
+*manifest*.csv
+
+# Synthetic browser-test artifacts and reports.
+.e2e/
+playwright-report/
+test-results/

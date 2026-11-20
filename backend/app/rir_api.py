@@ -5,6 +5,7 @@ from tempfile import NamedTemporaryFile
 from typing import Annotated
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
+from starlette.concurrency import run_in_threadpool
 
 from app.audio_validation import CHUNK_SIZE, MAX_FILE_BYTES, _looks_like_audio
 from app.preprocessing import load_audio
@@ -39,8 +40,8 @@ async def analyze_uploaded_rir(
                     raise HTTPException(413, "RIR file exceeds the 20 MiB limit.")
                 temp.write(chunk)
         try:
-            audio = load_audio(path)
-            metrics = analyze_rir(audio.samples, audio.sample_rate)
+            audio = await run_in_threadpool(load_audio, path)
+            metrics = await run_in_threadpool(analyze_rir, audio.samples, audio.sample_rate)
         except (ValueError, OSError, RuntimeError) as exc:
             raise HTTPException(422, f"RIR could not be analyzed: {exc}") from exc
         return {
