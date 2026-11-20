@@ -53,6 +53,7 @@ export default function RirAnalyzer() {
 
   function chooseFile(event: ChangeEvent<HTMLInputElement>): void {
     abortRef.current?.abort()
+    abortRef.current = null
     setLoading(false)
     setResult(null)
     setError(null)

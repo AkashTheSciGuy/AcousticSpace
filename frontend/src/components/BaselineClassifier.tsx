@@ -48,6 +48,9 @@ export default function BaselineClassifier() {
   async function refreshStatus(controller: AbortController, selectedVariant: ModelVariant): Promise<void> {
     statusControllerRef.current?.abort()
     statusControllerRef.current = controller
+    controllerRef.current?.abort()
+    controllerRef.current = null
+    setBusy(false)
     setStatusLoading(true)
     try {
       const response = await fetch(`/api/model/status?variant=${selectedVariant}`, { signal: controller.signal })
@@ -84,11 +87,13 @@ export default function BaselineClassifier() {
     return () => {
       controller.abort()
       controllerRef.current?.abort()
+      controllerRef.current = null
     }
   }, [variant])
 
   function choose(event: ChangeEvent<HTMLInputElement>) {
     controllerRef.current?.abort()
+    controllerRef.current = null
     setBusy(false)
     setResult(null)
     setError(null)
@@ -124,6 +129,7 @@ export default function BaselineClassifier() {
           typeof prediction.disclaimer !== 'string') throw new Error('Unexpected prediction response.')
       if (!controller.signal.aborted) setResult(prediction)
     } catch (cause) {
+      if (controllerRef.current !== controller) return
       if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : 'Prediction failed.')
       else setError('Prediction timed out or was cancelled.')
     } finally {
@@ -138,7 +144,14 @@ export default function BaselineClassifier() {
     <p>Choose between the deployed three-feature baseline and an optional six-feature speech-acoustic candidate. Neither estimates RIR.</p>
     <label className="baseline-variant-label" htmlFor="baseline-variant">Prediction model</label>
     <select id="baseline-variant" className="baseline-variant" value={variant}
-      onChange={(event) => setVariant(event.target.value as ModelVariant)}>
+      onChange={(event) => {
+        controllerRef.current?.abort()
+        controllerRef.current = null
+        setStatus(null)
+        setBusy(false)
+        setStatusLoading(true)
+        setVariant(event.target.value as ModelVariant)
+      }}>
       <option value="baseline">3-feature baseline (default)</option>
       <option value="acoustic">6-feature speech-acoustic candidate</option>
     </select>

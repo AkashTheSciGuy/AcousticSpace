@@ -74,7 +74,7 @@ async def validate_audio_upload(
             "filename": filename,
             "format": extension,
             "size_bytes": total_size,
-            "message": "Audio upload validated. Deepfake analysis is not available yet.",
+            "message": "Audio upload validated. No model prediction was performed.",
         }
     finally:
         await file.close()
