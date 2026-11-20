@@ -17,38 +17,38 @@
 
 **Backend**, in one terminal:
 
-\`\`\`cmd
+```cmd
 cd /d F:\Projects\AcousticSpace\backend
 python -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements-dev.txt -r requirements-ml.txt
 .venv\Scripts\python.exe -m pytest -q
 .venv\Scripts\python.exe -m uvicorn app.main:app --reload
-\`\`\`
+```
 
 Open API docs at http://localhost:8000/docs .
 
 **Frontend**, in a separate terminal:
 
-\`\`\`cmd
+```cmd
 cd /d F:\Projects\AcousticSpace\frontend
 npm ci
 npm run build
 npm run dev
-\`\`\`
+```
 
-Open http://localhost:5173 . Vite proxies \`/api\` to the backend on port 8000.
+Open http://localhost:5173 . Vite proxies `/api` to the backend on port 8000.
 
 ## Local model training and verification
 
 See [backend/DATASET_TRAINING.md](backend/DATASET_TRAINING.md), [backend/DAY3_CANDIDATE.md](backend/DAY3_CANDIDATE.md) and [backend/DAY20_DELIVERY.md](backend/DAY20_DELIVERY.md).
 
-Run from \`backend\` after training the models:
+Run from `backend` after training the models:
 
-\`\`\`cmd
+```cmd
 .venv\Scripts\python.exe scripts\verify_release.py
-\`\`\`
+```
 
-The \`backend/models/\` directory contains generated artifacts and reports. **Do not commit datasets, manifest files or trained \`.joblib\` models.** Only load trusted, self-generated joblib models.
+The `backend/models/` directory contains generated artifacts and reports. **Do not commit datasets, manifest files or trained `.joblib` models.** Only load trusted, self-generated joblib models.
 
 ## Experimental evaluation
 
