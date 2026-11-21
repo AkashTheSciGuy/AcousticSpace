@@ -7,6 +7,7 @@ This is reference-aided; it cannot operate on a single arbitrary recording.
 """
 import csv
 from collections import defaultdict
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -109,20 +110,24 @@ def read_controlled_manifest(root: Path) -> dict[str, list[dict]]:
     return grouped
 
 
-def extract_controlled_arrays(root: Path) -> dict[str, tuple[np.ndarray, np.ndarray]]:
-    """Build features exclusively from references and wet stems."""
+def extract_controlled_arrays(
+    root: Path, *, include_test: bool = False
+) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """Build features from references/stems; leave test audio unread by default."""
     grouped = read_controlled_manifest(root)
     arrays = {}
     root = root.resolve()
-    cache: dict[Path, np.ndarray] = {}
+
+    @lru_cache(maxsize=32)
+    def cached_audio(path: Path):
+        return _read_mono16(path)
 
     def audio(row, column):
-        path = _safe_audio_path(root, row[column])
-        if path not in cache:
-            cache[path] = _read_mono16(path)
-        return cache[path]
+        return cached_audio(_safe_audio_path(root, row[column]))
 
-    for split, rows in grouped.items():
+    selected_splits = SPLITS if include_test else ("train", "val")
+    for split in selected_splits:
+        rows = grouped[split]
         features, truth = [], []
         for row in rows:
             speech = audio(row, "speech_stem")

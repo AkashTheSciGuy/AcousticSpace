@@ -67,7 +67,7 @@ def train(root: Path, output: Path, *, evaluate_test: bool = False) -> dict:
     report_file = output.with_suffix(".json")
     if output.exists() or report_file.exists():
         raise FileExistsError("RIR model/report exists; use a new --output path.")
-    splits = extract_controlled_arrays(root)
+    splits = extract_controlled_arrays(root, include_test=evaluate_test)
     x_train, y_train = splits["train"]
     if x_train.ndim != 2 or x_train.shape[1] != len(FEATURE_NAMES):
         raise ValueError("Invalid RIR training features.")
