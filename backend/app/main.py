@@ -8,6 +8,7 @@ from app.rir_api import router as rir_router
 from app.prediction_api import router as prediction_router
 from app.comparison_api import router as comparison_router
 from app.segment_api import router as segment_router
+from app.diagnostics_api import router as diagnostics_router
 
 app = FastAPI(
     title='AcousticSpace API',
@@ -21,6 +22,7 @@ app.include_router(rir_router)
 app.include_router(prediction_router)
 app.include_router(comparison_router)
 app.include_router(segment_router)
+app.include_router(diagnostics_router)
 
 
 @app.get('/')
