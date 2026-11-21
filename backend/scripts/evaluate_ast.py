@@ -1,4 +1,4 @@
-"""Evaluate one locally trained AST checkpoint without modifying its weights.
+r"""Evaluate one locally trained AST checkpoint without modifying its weights.
 
 Examples (Windows CMD, run from backend):
     .venv\Scripts\python.exe scripts\evaluate_ast.py DATASET_ROOT MANIFEST --split val --select-threshold
@@ -78,6 +78,12 @@ def main(argv=None):
         parser.error("Explicit --threshold is required for test evaluation. Lock it on validation first.")
     if args.select_threshold and args.split != "val":
         parser.error("--select-threshold is permitted only with --split val.")
+    if args.output is not None and args.output.exists():
+        parser.error(
+            f"Output report already exists: {args.output}. "
+            "Choose a new filename, omit --output to print the report, "
+            "or inspect the existing file."
+        )
     report = evaluate_checkpoint(
         args.dataset_root, args.manifest, args.model_dir,
         split=args.split,
