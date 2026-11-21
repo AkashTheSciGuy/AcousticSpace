@@ -58,3 +58,24 @@ jobs:
           docker compose config -q
       - name: Build backend and frontend images
         run: docker compose build
+      - name: Smoke-test running containers and API proxy
+        run: |
+          docker compose up -d
+          for attempt in $(seq 1 40); do
+            if curl --fail --silent --max-time 5 http://127.0.0.1:8000/health >/dev/null &&
+               curl --fail --silent --max-time 5 http://127.0.0.1:5173/ >/dev/null; then
+              break
+            fi
+            sleep 3
+          done
+          curl --fail --silent http://127.0.0.1:8000/health
+          curl --fail --silent http://127.0.0.1:5173/ >/dev/null
+          curl --fail --silent "http://127.0.0.1:5173/api/model/status?variant=baseline" |
+            python -c "import json,sys; assert json.load(sys.stdin)['available'] is False"
+      - name: Print container logs on failure
+        if: failure()
+        run: docker compose logs --tail 100
+      - name: Stop containers
+        if: always()
+        run: docker compose down
+
