@@ -67,7 +67,7 @@ def analyze_rir(samples: np.ndarray, sample_rate: int) -> RirMetrics:
     fit_indices = np.flatnonzero((db <= -5.0) & (db >= -25.0))
     rt60: float | None = None
     r_squared: float | None = None
-    if fit_indices.size >= 20:
+    if db[-1] <= -25.0 and fit_indices.size >= 20:
         times = fit_indices / sample_rate
         slope, intercept = np.polyfit(times, db[fit_indices], 1)
         predictions = slope * times + intercept
