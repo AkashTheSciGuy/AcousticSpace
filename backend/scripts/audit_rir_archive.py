@@ -1,4 +1,4 @@
-"""Read-only inventory of measured-RIR candidates in the OpenSLR SLR28 ZIP.
+r"""Read-only inventory of measured-RIR candidates in the OpenSLR SLR28 ZIP.
 
 From backend:
     .venv\Scripts\python.exe scripts\audit_rir_archive.py ^
