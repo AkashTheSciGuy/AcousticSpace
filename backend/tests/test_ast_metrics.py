@@ -57,3 +57,18 @@ def test_cli_requires_precommitted_test_threshold():
     with pytest.raises(SystemExit) as error:
         main(["unused", "unused", "--split", "test", "--select-threshold"])
     assert error.value.code == 2
+
+def test_existing_output_rejected_before_model_inference(tmp_path, monkeypatch, capsys):
+    from scripts import evaluate_ast
+    report = tmp_path / "existing.json"
+    report.write_text('{"sentinel": true}', encoding="utf-8")
+
+    def forbidden_inference(*_args, **_kwargs):
+        raise AssertionError("Output preflight must run before expensive model inference")
+
+    monkeypatch.setattr(evaluate_ast, "evaluate_checkpoint", forbidden_inference)
+    with pytest.raises(SystemExit) as error:
+        evaluate_ast.main(["dataset", "manifest", "--output", str(report)])
+    assert error.value.code == 2
+    assert "Output report already exists" in capsys.readouterr().err
+    assert report.read_text(encoding="utf-8") == '{"sentinel": true}'
