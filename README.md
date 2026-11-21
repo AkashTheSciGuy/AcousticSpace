@@ -53,6 +53,12 @@ Run from `backend` after training the models:
 
 The `backend/models/` directory contains generated artifacts and reports. **Do not commit datasets, manifest files or trained `.joblib` models.** Only load trusted, self-generated joblib models.
 
+## Measured-RIR follow-up (Phase 2C)
+
+A reproducible experiment combining ARU anechoic speech with measured RVB2014 room responses is documented in [Phase 2C](docs/RIR_PHASE2C_REPRODUCIBILITY.md). Despite **93.75% validation accuracy**, its 16-sample held-out test was **50% accurate (ROC-AUC 0.5625)**. That is a negative generalization result, *not* evidence of a deployable RIR-based deepfake detector. The reference-aided classifier needs dry signals and isolated wet stems, which ordinary uploads do not provide.
+
+Preparation scripts, archive audit, and train/validation-only ablation diagnostics are now version-controlled under `backend/scripts/`. Do not tune on this previously viewed test split.
+
 ## Experimental evaluation
 
 The recorded local ASVspoof 2019 LA subset contained **400 train / 140 validation / 160 test recordings**.
