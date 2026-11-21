@@ -2,6 +2,7 @@ import AudioUpload from './components/AudioUpload'
 import RirAnalyzer from './components/RirAnalyzer'
 import BaselineClassifier from './components/BaselineClassifier'
 import AcousticComparison from './components/AcousticComparison'
+import AstClassifier from './components/AstClassifier'
 import HistoryPanel from './components/HistoryPanel'
 import './App.css'
 
@@ -53,6 +54,7 @@ function App() {
         <RirAnalyzer />
         <BaselineClassifier />
         <AcousticComparison />
+        <AstClassifier />
         <HistoryPanel />
         <section className="info-grid" aria-label="Project information">
           <article className="info-card">

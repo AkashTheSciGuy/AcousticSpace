@@ -1,0 +1,9 @@
+.ast-card { margin-top:20px; padding:24px; border:1px solid #293951; border-radius:17px; background:#141e2e; color:#d7e5fa; }
+.ast-card h2 { margin:0 0 10px; font-size:20px; }
+.ast-card p,.ast-card small { color:#a3b1c9; font-size:12px; line-height:1.7; }
+.ast-card button { padding:10px 12px; border:1px solid #45607f; border-radius:8px; background:#273e60; color:#e8f0ff; cursor:pointer; }
+.ast-card button:disabled { opacity:.5; cursor:not-allowed; }
+.ast-card input { display:block; margin:12px 0; max-width:100%; }
+.ast-status { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:14px 0; font-size:13px; }
+.ast-card small { display:block; margin-top:10px; }
+@media(max-width:700px) { .ast-card { padding:17px; } }

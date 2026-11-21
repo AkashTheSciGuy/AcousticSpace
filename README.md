@@ -12,6 +12,9 @@
 - Isolated RIR analysis: T20-derived RT60, clarity C50 and approximate direct/reverberant energy ratio.
 - Trained local baseline and opt-in six-feature experimental candidate, both served through FastAPI.
 - Validation/test metric reports, confusion matrices and the feature comparison dashboard.
+- Exploratory overlapping-window score timeline, session-only metadata history, and log-mel spectrogram/cadence observations (not validated spoof localization or breath detection).
+- Optional Hugging Face AST checkpoint training/inference interfaces; unavailable until a real local AST model is trained.
+- Docker Compose local demo with Nginx and FastAPI, plus GitHub Actions CI.
 
 ## Start locally (Windows CMD)
 
@@ -66,8 +69,10 @@ This was a within-dataset exploratory comparison. The official evaluation partit
 
 See [docs/DOCKER.md](docs/DOCKER.md). The demo uses Docker Compose with a read-only local model mount and Nginx proxy. Images do not bundle datasets or weights.
 
-## What is not implemented
+## What remains unverified or unfinished
 
-The original project workflow proposed an AST/CNN model, PyTorch fine-tuning, breathing/cadence analysis, suspicious segment localization, analysis history, public production deployment. **Those should not be presented as completed features.** This repository currently has an experimental speech-based classifier and a **separate** RIR analyzer; it does not reconstruct RIR from a speech clip.
+The original PDF calls for a **trained** AST model, physics-based RIR extraction from speech, true syllable/breath alignment, validated suspicious-segment localization, robust independent accuracy and deployment readiness. The optional AST trainer is present, but no AST training has been performed or verified on the user's hardware. The spectrogram, timing peaks and window scores are observational/experimental rather than validated physical or forensic inference. The RIR analyzer remains separate and requires a measured or simulated impulse response. Public production hardening, latency benchmarking and external-dataset evaluation remain research/engineering work.
+
+See [Project 1 requirements checklist](docs/PROJECT1_REQUIREMENTS.md) and [AST training instructions](backend/AST_TRAINING.md) for exact coverage.
 
 See [backend/DAY20_DELIVERY.md](backend/DAY20_DELIVERY.md) for the final local demo checklist. GitHub Actions runs backend tests and frontend checks on new pull requests.
