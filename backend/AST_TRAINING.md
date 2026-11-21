@@ -26,6 +26,10 @@ Test metrics are omitted unless `--evaluate-test` is explicitly passed after mod
 
 Before running full fine-tuning, verify correct torch, torchaudio and transformers installations on the actual machine; the optional dependencies and training loop have not been exercised on the user's local GPU.
 
+## Follow-up evaluation and second experiment
+
+After the first checkpoint is saved, use [AST_EVALUATION.md](AST_EVALUATION.md) for **read-only validation diagnostics** and a separate head-only v2 experiment. Do not overwrite your working checkpoint.
+
 ## Limitations
 
 - AST classifies speech recordings; it does not isolate RIR from unknown speech.

@@ -15,7 +15,8 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_score, recall_score
+from sklearn.metrics import (accuracy_score, balanced_accuracy_score, confusion_matrix,
+                             f1_score, precision_score, recall_score)
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.ast_inputs import ast_input_values, forward_ast  # noqa: E402
@@ -48,11 +49,20 @@ def evaluate(model, loader, device, torch) -> dict:
     return {
         "samples": len(truth),
         "accuracy": float(accuracy_score(truth, guesses)),
+        "balanced_accuracy": float(balanced_accuracy_score(truth, guesses)),
         "precision_fake": float(precision_score(truth, guesses, zero_division=0)),
         "recall_fake": float(recall_score(truth, guesses, zero_division=0)),
         "f1_fake": float(f1_score(truth, guesses, zero_division=0)),
         "confusion_matrix_real_fake": confusion_matrix(truth, guesses, labels=[0, 1]).tolist(),
     }
+
+
+def accumulation_divisor(step: int, total: int, accumulate: int) -> int:
+    """Scale the final accumulation group correctly when it is short."""
+    if total < 1 or accumulate < 1 or step < 1 or step > total:
+        raise ValueError("Invalid optimizer accumulation arguments.")
+    group_first = ((step - 1) // accumulate) * accumulate
+    return min(accumulate, total - group_first)
 
 
 def train(args) -> dict:
@@ -66,6 +76,8 @@ def train(args) -> dict:
 
     if args.epochs < 1 or args.batch_size < 1 or args.accumulate < 1:
         raise ValueError("Epochs, batch size and gradient accumulation must be positive.")
+    if args.patience < 0 or not np.isfinite(args.lr) or args.lr <= 0:
+        raise ValueError("Patience must be nonnegative and learning rate must be positive.")
     if args.output.exists():
         raise FileExistsError("AST output directory already exists; choose a new output.")
     grouped = split_rows(args.dataset, args.manifest)
@@ -107,33 +119,60 @@ def train(args) -> dict:
     optimizer = torch.optim.AdamW((p for p in model.parameters() if p.requires_grad), lr=args.lr)
     use_amp = device.type == "cuda"
     scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
-    best_f1 = -1.0
+    best_score = -1.0
     best_state = None
     best_metrics = None
+    best_epoch = 0
+    history = []
+    epochs_without_improvement = 0
     for epoch in range(args.epochs):
         model.train()
+        # Prevent train-mode stochastic changes inside the *frozen* encoder.
+        # The new classification head remains in training mode.
+        if not args.full_finetune:
+            model.audio_spectrogram_transformer.eval()
         optimizer.zero_grad(set_to_none=True)
+        train_loss_sum = 0.0
         for step, (input_values, labels) in enumerate(train_loader, 1):
+            # The final partial gradient-accumulation group needs its own
+            # divisor, otherwise its update is unintentionally under-scaled.
+            divisor = accumulation_divisor(step, len(train_loader), args.accumulate)
             with torch.autocast(device_type="cuda", dtype=torch.float16, enabled=use_amp):
-                loss = forward_ast(model, input_values.to(device),
-                                   labels=labels.to(device)).loss / args.accumulate
+                raw_loss = forward_ast(model, input_values.to(device),
+                                       labels=labels.to(device)).loss
+                loss = raw_loss / divisor
+            train_loss_sum += float(raw_loss.detach().item())
             scaler.scale(loss).backward()
             if step % args.accumulate == 0 or step == len(train_loader):
                 scaler.step(optimizer)
                 scaler.update()
                 optimizer.zero_grad(set_to_none=True)
         metrics = evaluate(model, val_loader, device, torch)
-        print(json.dumps({"epoch": epoch + 1, "validation": metrics}))
-        if metrics["f1_fake"] > best_f1:
-            best_f1 = metrics["f1_fake"]
+        train_loss = train_loss_sum / len(train_loader)
+        history.append({"epoch": epoch + 1, "train_loss": train_loss, "validation": metrics})
+        print(json.dumps({"epoch": epoch + 1, "train_loss": train_loss,
+                          "selection_metric": args.selection_metric, "validation": metrics}),
+              flush=True)
+        score = metrics[args.selection_metric]
+        if score > best_score:
+            best_score = score
             best_metrics = metrics
+            best_epoch = epoch + 1
+            epochs_without_improvement = 0
             best_state = {name: parameter.detach().cpu().clone()
                           for name, parameter in model.state_dict().items()}
+        else:
+            epochs_without_improvement += 1
+        if args.patience and epochs_without_improvement >= args.patience:
+            print(json.dumps({"early_stopped_after_epoch": epoch + 1,
+                              "best_epoch": best_epoch}), flush=True)
+            break
     if best_state is None:
         raise RuntimeError("Training did not produce a valid model.")
     model.load_state_dict(best_state)
     model.to(device)
-    results = {"validation": best_metrics}
+    results = {"validation": best_metrics, "best_epoch": best_epoch,
+               "selection_metric": args.selection_metric, "epoch_history": history}
     if args.evaluate_test:
         loader = DataLoader(AudioDataset(grouped["test"]), batch_size=args.batch_size,
                             shuffle=False, num_workers=0)
@@ -148,6 +187,9 @@ def train(args) -> dict:
         "val_count": len(grouped["val"]),
         "test_count": len(grouped["test"]),
         "full_finetune": args.full_finetune,
+        "learning_rate": args.lr,
+        "gradient_accumulation": args.accumulate,
+        "early_stopping_patience": args.patience,
         "max_audio_seconds": 10,
         "warning": "Experimental real/fake AST classifier, not RIR recovery or cadence alignment.",
         "metrics": results,
@@ -166,6 +208,11 @@ def main():
     parser.add_argument("--accumulate", type=int, default=4)
     parser.add_argument("--lr", type=float, default=2e-5)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--selection-metric", choices=("f1_fake", "balanced_accuracy"),
+                        default="f1_fake",
+                        help="Choose checkpoint on validation only. Balanced accuracy penalizes real false positives.")
+    parser.add_argument("--patience", type=int, default=0,
+                        help="Stop after this many epochs without improvement (0 disables).")
     parser.add_argument("--full-finetune", action="store_true")
     parser.add_argument("--evaluate-test", action="store_true")
     args = parser.parse_args()
