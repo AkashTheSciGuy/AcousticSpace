@@ -90,6 +90,7 @@ export default function AudioPreview({ file }: AudioPreviewProps) {
     const player = waveSurferRef.current
     if (!player) return
     void player.playPause().catch(() => {
+      if (waveSurferRef.current !== player) return
       setError('Audio playback failed. Check that this recording is supported.')
       setPlaying(false)
     })
@@ -126,9 +127,9 @@ export default function AudioPreview({ file }: AudioPreviewProps) {
           <input
             type="range"
             min={0}
-            max={Math.max(duration, 1)}
+            max={duration}
             step={0.1}
-            value={Math.min(currentTime, Math.max(duration, 1))}
+            value={Math.min(currentTime, duration)}
             onChange={(event) => waveSurferRef.current?.setTime(Number(event.target.value))}
             disabled={loading || Boolean(error)}
           />
