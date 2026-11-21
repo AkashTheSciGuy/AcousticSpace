@@ -1,4 +1,4 @@
-"""Build a bounded synthetic same-room/different-room RIR benchmark.
+r"""Build a bounded synthetic same-room/different-room RIR benchmark.
 
 Windows CMD (run from backend):
     .venv\Scripts\python.exe scripts\build_rir_dataset.py ^

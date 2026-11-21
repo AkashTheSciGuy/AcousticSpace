@@ -1,4 +1,4 @@
-"""Generate synthetic RIR experiment INPUTS for a pipeline smoke test.
+r"""Generate synthetic RIR experiment INPUTS for a pipeline smoke test.
 
 The 'speech-like' excitations are synthetic harmonic signals, NOT voices.
 No real speakers, measured rooms, spoofed voices, or model accuracy claims.
