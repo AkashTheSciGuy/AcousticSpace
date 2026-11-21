@@ -42,6 +42,7 @@ export default function BaselineClassifier() {
   const [statusLoading, setStatusLoading] = useState(true)
   const statusControllerRef = useRef<AbortController | null>(null)
   const [file, setFile] = useState<File | null>(null)
+  const [fileSelectionVersion, setFileSelectionVersion] = useState(0)
   const [result, setResult] = useState<Prediction | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -104,7 +105,10 @@ export default function BaselineClassifier() {
     if (selected && (!/\.(wav|mp3)$/i.test(selected.name) || !selected.size || selected.size > MAX_SIZE)) {
       setFile(null)
       setError('Choose a nonempty WAV/MP3 recording under 20 MiB.')
-    } else setFile(selected)
+    } else {
+      if (selected) setFileSelectionVersion(version => version + 1)
+      setFile(selected)
+    }
   }
 
   async function predict() {
@@ -152,9 +156,14 @@ export default function BaselineClassifier() {
       onChange={(event) => {
         controllerRef.current?.abort()
         controllerRef.current = null
+        statusControllerRef.current?.abort()
+        statusControllerRef.current = null
         setStatus(null)
         setBusy(false)
         setStatusLoading(true)
+        setFile(null)
+        setResult(null)
+        setError(null)
         setVariant(event.target.value as ModelVariant)
       }}>
       <option value="baseline">3-feature baseline (default)</option>
@@ -230,7 +239,7 @@ export default function BaselineClassifier() {
       </button>
     </div>
     {file && <p>Selected: {file.name}</p>}
-    <SegmentReview file={file} variant={variant} available={Boolean(status?.available) && !statusLoading} />
+    <SegmentReview key={`${variant}:${fileSelectionVersion}:${status?.available && !statusLoading ? 'ready' : 'pending'}`} file={file} variant={variant} available={Boolean(status?.available) && !statusLoading} />
     {error && <p role="alert" className="baseline-error">{error}</p>}
     {result && <div className="baseline-results" role="status">
       <strong>{result.variant === 'acoustic' ? 'Six-feature candidate' : 'Three-feature baseline'} prediction: {result.label.toUpperCase()}</strong>

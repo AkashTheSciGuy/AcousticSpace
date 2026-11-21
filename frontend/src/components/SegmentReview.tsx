@@ -34,14 +34,12 @@ export default function SegmentReview({ file, variant, available }: Props) {
   const [error, setError] = useState<string | null>(null)
   const activeRequest = useRef<AbortController | null>(null)
 
-  useEffect(() => {
+  // The parent remounts this component for each selected file/model.
+  // The effect only synchronizes an external resource: an in-flight request.
+  useEffect(() => () => {
     activeRequest.current?.abort()
     activeRequest.current = null
-    setReport(null)
-    setError(null)
-    setLoading(false)
-    return () => { activeRequest.current?.abort(); activeRequest.current = null }
-  }, [file, variant, available])
+  }, [])
 
   async function review() {
     if (!file || !available || loading) return
