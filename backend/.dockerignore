@@ -1,0 +1,11 @@
+__pycache__
+*.pyc
+.venv
+.pytest_cache
+models
+tests
+*.joblib
+*.flac
+*.wav
+*.mp3
+*.zip

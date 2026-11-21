@@ -47,3 +47,14 @@ jobs:
         run: npm run build
       - name: Lint frontend
         run: npm run lint
+
+  containers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Compose configuration
+        run: |
+          mkdir -p backend/models
+          docker compose config -q
+      - name: Build backend and frontend images
+        run: docker compose build
