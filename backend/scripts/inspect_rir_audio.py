@@ -20,7 +20,8 @@ from pathlib import Path
 
 import soundfile as sf
 
-from scripts.audit_rir_archive import MAX_MEMBER_BYTES, audit
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from scripts.audit_rir_archive import MAX_MEMBER_BYTES, audit  # noqa: E402
 
 
 def inspect(path: Path) -> dict:
