@@ -78,3 +78,21 @@ The local SLR28 archive listing contained **24 RVB2014, 118 RWCP, and 84 AIR can
 5. Validate a separately trained AST spoof detector, breathing/phoneme alignment, suspicious segment localization, latency and deployment claims with independent evidence.
 
 **Conclusion:** Phase 2C is a reproducible research experiment, not a completed or independently validated physics-based deepfake detector.
+
+## Signal-quality gate before selecting additional RIRs
+
+The Phase 2C follow-up adds a **read-only single-microphone-channel signal audit**, because a valid 16-kHz PCM WAV header is not the same as an acoustically usable impulse response.
+
+From `backend` in Windows CMD:
+
+```cmd
+.venv\Scripts\python.exe scripts\audit_rir_signal_quality.py datasets\rir_sources\rirs_noises.zip --output datasets\rir_sources\rir_signal_quality_v1.json --channel 1
+```
+
+The audit computes each selected microphone channel's peak, RMS, peak position, energy in the final 10% of the recording, and a hash. It flags silence, near-full-scale runs, short recordings, high tail energy, late peaks, non-16-kHz input and recordings outside the existing dataset generator's 0.016–2-second RIR frame bounds. No audio is extracted or transformed, and no model/training split is changed.
+
+**Caution:** These flags are heuristics, not scientifically validated accept/reject labels. Responses whose tails remain energetic need inspection; longer recordings cannot simply be truncated without measuring the acoustic consequences. AIR binaural channels, RWCP array channels and RVB2014 microphone channels are not interchangeable or independent rooms. Preserve a consistent channel-selection and physical-room provenance protocol.
+
+Source documentation: [OpenSLR SLR28](https://www.openslr.org/28), [Aachen AIR documentation](https://www.iks.rwth-aachen.de/en/research/tools-downloads/databases/aachen-impulse-response-database/), and [OpenSLR RWCP Sound Scene Database](https://www.openslr.org/13). The three source collections have different acquisition protocols; mixing their recording-series IDs without source metadata can create invalid labels or shortcut signals. AIR's `stairway` recordings and RWCP's `circle_ane` recordings should not be interpreted as separate physical rooms based on their counts.
+
+**Next gate:** review the audit, independently verify the real room identities, choose multiple response measurements from each confirmed room, and allocate room-disjoint splits *before* building any expanded training benchmark. No old held-out test results should guide feature selection.
