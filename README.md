@@ -62,8 +62,12 @@ The recorded local ASVspoof 2019 LA subset contained **400 train / 140 validatio
 
 This was a within-dataset exploratory comparison. The official evaluation partition was not used, and generalization to unknown recordings has not been verified. The candidate detects more spoofed samples in this test but also increases false positives.
 
+## Containerized local demo
+
+See [docs/DOCKER.md](docs/DOCKER.md). The demo uses Docker Compose with a read-only local model mount and Nginx proxy. Images do not bundle datasets or weights.
+
 ## What is not implemented
 
-The original project workflow proposed an AST/CNN model, PyTorch fine-tuning, breathing/cadence analysis, suspicious segment localization, analysis history, Docker and CI/CD deployment. **Those should not be presented as completed features.** This repository currently has an experimental speech-based classifier and a **separate** RIR analyzer; it does not reconstruct RIR from a speech clip.
+The original project workflow proposed an AST/CNN model, PyTorch fine-tuning, breathing/cadence analysis, suspicious segment localization, analysis history, public production deployment. **Those should not be presented as completed features.** This repository currently has an experimental speech-based classifier and a **separate** RIR analyzer; it does not reconstruct RIR from a speech clip.
 
 See [backend/DAY20_DELIVERY.md](backend/DAY20_DELIVERY.md) for the final local demo checklist. GitHub Actions runs backend tests and frontend checks on new pull requests.
