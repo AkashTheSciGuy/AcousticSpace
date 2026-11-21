@@ -49,3 +49,11 @@ def test_delayed_onset() -> None:
     samples = np.concatenate([np.zeros(4000), impulse])
     result = analyze_rir(samples, 16000)
     assert result.onset_seconds == pytest.approx(0.25)
+
+
+def test_truncated_decay_cannot_support_t20() -> None:
+    # A strong final reflection leaves the measured decay above the required -25 dB.
+    energy = 10 ** (-np.linspace(0, 18, 1600) / 10)
+    samples = np.sqrt(np.r_[energy[:-1] - energy[1:], energy[-1]])
+    samples[0] = 1.0
+    assert analyze_rir(samples, 16000).rt60_t20_seconds is None
