@@ -2,6 +2,7 @@ import AudioUpload from './components/AudioUpload'
 import RirAnalyzer from './components/RirAnalyzer'
 import BaselineClassifier from './components/BaselineClassifier'
 import AcousticComparison from './components/AcousticComparison'
+import HistoryPanel from './components/HistoryPanel'
 import './App.css'
 
 const pipelineSteps = [
@@ -52,6 +53,7 @@ function App() {
         <RirAnalyzer />
         <BaselineClassifier />
         <AcousticComparison />
+        <HistoryPanel />
         <section className="info-grid" aria-label="Project information">
           <article className="info-card">
             <div className="info-card-icon" aria-hidden="true">01</div>

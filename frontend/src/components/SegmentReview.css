@@ -1,0 +1,12 @@
+.segment-review { margin: 14px 0; padding: 15px; border: 1px solid #334662; border-radius: 10px; background: #192638; }
+.segment-review button { padding: 10px 12px; border-radius: 8px; border: 1px solid #45607f; background: #273e60; color: #e8f0ff; cursor: pointer; }
+.segment-review button:disabled { opacity: .5; cursor: not-allowed; }
+.segment-review small, .segment-review .segment-warning { display: block; margin-top: 8px; color: #b5c4da; font-size: 12px; line-height: 1.6; }
+.segment-review h3 { margin: 16px 0 12px; font-size: 15px; }
+.segment-list { display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; }
+.segment-entry { display: grid; grid-template-columns: 90px minmax(50px, 1fr) 60px auto; align-items: center; gap: 8px; font-size: 12px; }
+.segment-bar { height: 8px; overflow: hidden; border-radius: 9px; background: #354a66; }
+.segment-bar span { display: block; height: 100%; background: #8ea8ff; }
+.segment-entry strong { font-size: 12px; }
+.segment-flag { color: #f5bd75; font-size: 11px; }
+@media (max-width: 640px) { .segment-entry { grid-template-columns: 85px 1fr 55px; } .segment-flag { grid-column: 2 / -1; } }
