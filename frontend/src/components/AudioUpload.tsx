@@ -21,6 +21,7 @@ export default function AudioUpload() {
   const inputRef = useRef<HTMLInputElement>(null)
   const requestRef = useRef<AbortController | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [selectionVersion, setSelectionVersion] = useState(0)
   const [fileError, setFileError] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [validationState, setValidationState] = useState<ValidationState>('idle')
@@ -55,6 +56,7 @@ export default function AudioUpload() {
       setSelectedFile(null)
       return
     }
+    setSelectionVersion(version => version + 1)
     setSelectedFile(file)
     setFileError(null)
   }
@@ -160,7 +162,7 @@ export default function AudioUpload() {
             <button className="text-button" type="button" onClick={clearSelection}>Remove</button>
           </div>
           <AudioPreview file={selectedFile} />
-          <SpeechDiagnostics file={selectedFile} />
+          <SpeechDiagnostics key={selectionVersion} file={selectedFile} />
         </>
       )}
 

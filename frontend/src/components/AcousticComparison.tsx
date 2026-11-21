@@ -39,6 +39,15 @@ function validComparison(data: unknown): data is Comparison {
   })
 }
 
+async function fetchComparisonReport(signal: AbortSignal): Promise<Comparison | null> {
+  const response = await fetch('/api/model/comparison', { signal })
+  if (response.status === 404) return null
+  if (!response.ok) throw new Error('Comparison API unavailable')
+  const data: unknown = await response.json()
+  if (!validComparison(data)) throw new Error('Invalid comparison report')
+  return data
+}
+
 export default function AcousticComparison() {
   const [report, setReport] = useState<Comparison | null>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading')
@@ -48,18 +57,18 @@ export default function AcousticComparison() {
     controllerRef.current?.abort()
     controllerRef.current = controller
     setState('loading')
+    setReport(null)
     try {
-      const response = await fetch('/api/model/comparison', { signal: controller.signal })
-      if (response.status === 404) {
-        if (!controller.signal.aborted) { setReport(null); setState('missing') }
-        return
+      const next = await fetchComparisonReport(controller.signal)
+      if (controllerRef.current === controller && !controller.signal.aborted) {
+        setReport(next)
+        setState(next ? 'ready' : 'missing')
       }
-      if (!response.ok) throw new Error('Comparison API unavailable')
-      const data: unknown = await response.json()
-      if (!validComparison(data)) throw new Error('Invalid comparison report')
-      if (!controller.signal.aborted) { setReport(data); setState('ready') }
     } catch {
-      if (!controller.signal.aborted) { setReport(null); setState('error') }
+      if (controllerRef.current === controller && !controller.signal.aborted) {
+        setReport(null)
+        setState('error')
+      }
     } finally {
       if (controllerRef.current === controller) controllerRef.current = null
     }
@@ -67,8 +76,26 @@ export default function AcousticComparison() {
 
   useEffect(() => {
     const controller = new AbortController()
-    void loadReport(controller)
-    return () => controller.abort()
+    controllerRef.current = controller
+    // Initial state is already loading; update only after asynchronous I/O.
+    void fetchComparisonReport(controller.signal)
+      .then(next => {
+        if (controllerRef.current !== controller || controller.signal.aborted) return
+        setReport(next)
+        setState(next ? 'ready' : 'missing')
+      })
+      .catch(() => {
+        if (controllerRef.current !== controller || controller.signal.aborted) return
+        setReport(null)
+        setState('error')
+      })
+      .finally(() => {
+        if (controllerRef.current === controller) controllerRef.current = null
+      })
+    return () => {
+      controller.abort()
+      if (controllerRef.current === controller) controllerRef.current = null
+    }
   }, [])
 
   return (

@@ -37,14 +37,11 @@ export default function SpeechDiagnostics({ file }: { file: File }) {
   const controllerRef = useRef<AbortController | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
-  useEffect(() => {
+  // A new file remounts the component; cleanup only cancels the prior request.
+  useEffect(() => () => {
     controllerRef.current?.abort()
     controllerRef.current = null
-    setReport(null)
-    setLoading(false)
-    setError(null)
-    return () => { controllerRef.current?.abort(); controllerRef.current = null }
-  }, [file])
+  }, [])
 
   useEffect(() => {
     const canvas = canvasRef.current
