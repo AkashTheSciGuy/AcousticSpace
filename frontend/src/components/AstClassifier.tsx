@@ -5,6 +5,17 @@ type Status = { available: boolean; model_type: string; message: string }
 type Prediction = { status: 'predicted'; label: 'real' | 'fake'; fake_probability: number;
   analyzed_seconds: number; disclaimer: string }
 
+async function fetchAstStatus(signal: AbortSignal): Promise<Status> {
+  const response = await fetch('/api/ast/status', { signal })
+  const data: unknown = await response.json()
+  if (!response.ok || !data || typeof data !== 'object' ||
+      typeof (data as Status).available !== 'boolean' ||
+      typeof (data as Status).message !== 'string') {
+    throw new Error('Cannot read AST status.')
+  }
+  return data as Status
+}
+
 export default function AstClassifier() {
   const [status, setStatus] = useState<Status | null>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -16,28 +27,48 @@ export default function AstClassifier() {
 
   async function refresh() {
     statusAbort.current?.abort()
+    requestAbort.current?.abort()
+    requestAbort.current = null
+    setBusy(false)
     const controller = new AbortController()
     statusAbort.current = controller
+    setStatus(null)
     setError(null)
     setResult(null)
     try {
-      const response = await fetch('/api/ast/status', { signal: controller.signal })
-      const data: unknown = await response.json()
-      if (!response.ok || !data || typeof data !== 'object' ||
-          typeof (data as Status).available !== 'boolean' ||
-          typeof (data as Status).message !== 'string') throw new Error('Cannot read AST status.')
-      if (statusAbort.current === controller) setStatus(data as Status)
+      const data = await fetchAstStatus(controller.signal)
+      if (!controller.signal.aborted && statusAbort.current === controller) setStatus(data)
     } catch (cause) {
-      if (statusAbort.current === controller) setError(
-        cause instanceof Error ? cause.message : 'AST status unavailable.')
+      if (!controller.signal.aborted && statusAbort.current === controller) {
+        setError(cause instanceof Error ? cause.message : 'AST status unavailable.')
+      }
     } finally {
       if (statusAbort.current === controller) statusAbort.current = null
     }
   }
 
   useEffect(() => {
-    void refresh()
-    return () => { statusAbort.current?.abort(); requestAbort.current?.abort() }
+    const controller = new AbortController()
+    statusAbort.current = controller
+    // Do not synchronously reset state in a mount effect; wait for I/O.
+    void fetchAstStatus(controller.signal)
+      .then(data => {
+        if (!controller.signal.aborted && statusAbort.current === controller) setStatus(data)
+      })
+      .catch(cause => {
+        if (!controller.signal.aborted && statusAbort.current === controller) {
+          setError(cause instanceof Error ? cause.message : 'AST status unavailable.')
+        }
+      })
+      .finally(() => {
+        if (statusAbort.current === controller) statusAbort.current = null
+      })
+    return () => {
+      controller.abort()
+      if (statusAbort.current === controller) statusAbort.current = null
+      requestAbort.current?.abort()
+      requestAbort.current = null
+    }
   }, [])
 
   async function predict() {
@@ -82,7 +113,7 @@ export default function AstClassifier() {
     <h2 id="ast-title">Audio Spectrogram Transformer (optional experiment)</h2>
     <p>The pretrained AST needs a locally trained real/fake checkpoint before predictions can run. It does not measure a room impulse response.</p>
     <div className="ast-status">
-      <span role="status">{status ? (status.available ? 'Trained AST available' : 'Unavailable: ' + status.message) : 'Checking AST readiness…'}</span>
+      <span role="status">{status ? (status.available ? 'Trained AST available' : 'Unavailable: ' + status.message) : error ? 'AST status unavailable' : 'Checking AST readiness…'}</span>
       <button type="button" onClick={() => { void refresh() }}>Refresh AST status</button>
     </div>
     <input type="file" accept=".wav,.mp3,audio/wav,audio/mpeg" aria-label="Choose AST recording"
