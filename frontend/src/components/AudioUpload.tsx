@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent } from 'react'
 import AudioPreview from './AudioPreview'
+import SpeechDiagnostics from './SpeechDiagnostics'
 import { validateAudio, validationMode } from '../services/audioApi'
 import type { AudioValidationResult } from '../services/audioApi'
 import './AudioUpload.css'
@@ -159,6 +160,7 @@ export default function AudioUpload() {
             <button className="text-button" type="button" onClick={clearSelection}>Remove</button>
           </div>
           <AudioPreview file={selectedFile} />
+          <SpeechDiagnostics file={selectedFile} />
         </>
       )}
 
