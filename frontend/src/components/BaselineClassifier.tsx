@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
+import SegmentReview from './SegmentReview'
+import { addAnalysisHistory } from '../services/analysisHistory'
 import './BaselineClassifier.css'
 
 type EvaluationMetrics = {
@@ -127,7 +129,10 @@ export default function BaselineClassifier() {
       if (prediction.status !== 'predicted' || prediction.variant !== variant || !['real', 'fake'].includes(prediction.label) ||
           !Number.isFinite(prediction.fake_probability) || !Number.isFinite(prediction.real_probability) ||
           typeof prediction.disclaimer !== 'string') throw new Error('Unexpected prediction response.')
-      if (!controller.signal.aborted) setResult(prediction)
+      if (!controller.signal.aborted && controllerRef.current === controller) {
+        setResult(prediction)
+        addAnalysisHistory({ variant, label: prediction.label, fakeScore: prediction.fake_probability })
+      }
     } catch (cause) {
       if (controllerRef.current !== controller) return
       if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : 'Prediction failed.')
@@ -225,6 +230,7 @@ export default function BaselineClassifier() {
       </button>
     </div>
     {file && <p>Selected: {file.name}</p>}
+    <SegmentReview file={file} variant={variant} available={Boolean(status?.available) && !statusLoading} />
     {error && <p role="alert" className="baseline-error">{error}</p>}
     {result && <div className="baseline-results" role="status">
       <strong>{result.variant === 'acoustic' ? 'Six-feature candidate' : 'Three-feature baseline'} prediction: {result.label.toUpperCase()}</strong>
