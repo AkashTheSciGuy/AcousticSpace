@@ -18,6 +18,7 @@ import numpy as np
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_score, recall_score
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from app.ast_inputs import ast_input_values, forward_ast  # noqa: E402
 from app.manifest_validation import validate_training_manifest  # noqa: E402
 from app.preprocessing import load_audio  # noqa: E402
 
@@ -40,8 +41,8 @@ def evaluate(model, loader, device, torch) -> dict:
     model.eval()
     truth, guesses = [], []
     with torch.inference_mode():
-        for input_features, labels in loader:
-            output = model(input_features=input_features.to(device)).logits
+        for input_values, labels in loader:
+            output = forward_ast(model, input_values.to(device)).logits
             truth.extend(labels.tolist())
             guesses.extend(output.argmax(dim=-1).cpu().tolist())
     return {
@@ -96,8 +97,8 @@ def train(args) -> dict:
         def __getitem__(self, index):
             path, label = self.rows[index]
             waveform = load_audio(path).samples[:160000]  # 10 seconds at 16 kHz
-            features = extractor(waveform, sampling_rate=16000, return_tensors="pt")
-            return features["input_features"].squeeze(0), torch.tensor(label, dtype=torch.long)
+            values = ast_input_values(extractor, waveform)
+            return values.squeeze(0), torch.tensor(label, dtype=torch.long)
 
     train_loader = DataLoader(AudioDataset(grouped["train"]), batch_size=args.batch_size,
                               shuffle=True, num_workers=0)
@@ -112,10 +113,10 @@ def train(args) -> dict:
     for epoch in range(args.epochs):
         model.train()
         optimizer.zero_grad(set_to_none=True)
-        for step, (input_features, labels) in enumerate(train_loader, 1):
+        for step, (input_values, labels) in enumerate(train_loader, 1):
             with torch.autocast(device_type="cuda", dtype=torch.float16, enabled=use_amp):
-                loss = model(input_features=input_features.to(device),
-                             labels=labels.to(device)).loss / args.accumulate
+                loss = forward_ast(model, input_values.to(device),
+                                   labels=labels.to(device)).loss / args.accumulate
             scaler.scale(loss).backward()
             if step % args.accumulate == 0 or step == len(train_loader):
                 scaler.step(optimizer)

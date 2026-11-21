@@ -10,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 
+from app.ast_inputs import ast_input_values, forward_ast
 from app.preprocessing import PreprocessedAudio
 
 DEFAULT_AST_PATH = Path(__file__).resolve().parents[1] / "models" / "ast_model"
@@ -79,9 +80,9 @@ def predict_ast(audio: PreprocessedAudio) -> dict:
         raise ValueError("Expected nonempty finite mono audio.")
     # Match the 10-s maximum clip length used during training.
     clipped = waveform[:160000]
-    features = extractor(clipped, sampling_rate=16000, return_tensors="pt")
+    values = ast_input_values(extractor, clipped)
     with torch.inference_mode():
-        logits = model(input_features=features["input_features"].to(device)).logits
+        logits = forward_ast(model, values.to(device)).logits
         scores = torch.softmax(logits, dim=-1)[0].detach().cpu().numpy()
     if scores.shape != (2,) or not np.isfinite(scores).all():
         raise ASTUnavailableError("AST returned an invalid output.")
