@@ -34,6 +34,17 @@ type Prediction = {
   real_probability: number
   disclaimer: string
 }
+async function fetchModelStatus(variant: ModelVariant, signal: AbortSignal): Promise<Status> {
+  const response = await fetch(`/api/model/status?variant=${variant}`, { signal })
+  if (!response.ok) throw new Error(`Model status unavailable (HTTP ${response.status}).`)
+  const data: unknown = await response.json()
+  if (!data || typeof data !== 'object' || typeof (data as Status).available !== 'boolean' ||
+      typeof (data as Status).message !== 'string') {
+    throw new Error('Unexpected model status response.')
+  }
+  return data as Status
+}
+
 const MAX_SIZE = 20 * 1024 * 1024
 
 export default function BaselineClassifier() {
@@ -54,20 +65,17 @@ export default function BaselineClassifier() {
     controllerRef.current?.abort()
     controllerRef.current = null
     setBusy(false)
+    setStatus(null)
+    setResult(null)
     setStatusLoading(true)
     try {
-      const response = await fetch(`/api/model/status?variant=${selectedVariant}`, { signal: controller.signal })
-      if (!response.ok) throw new Error(`Model status unavailable (HTTP ${response.status}).`)
-      const data: unknown = await response.json()
-      if (!data || typeof data !== 'object' || typeof (data as Status).available !== 'boolean' ||
-          typeof (data as Status).message !== 'string') throw new Error('Unexpected model status response.')
-      if (!controller.signal.aborted) {
-        setStatus(data as Status)
-        setResult(null)
+      const data = await fetchModelStatus(selectedVariant, controller.signal)
+      if (!controller.signal.aborted && statusControllerRef.current === controller) {
+        setStatus(data)
         setError(null)
       }
     } catch (cause: unknown) {
-      if (!controller.signal.aborted) {
+      if (!controller.signal.aborted && statusControllerRef.current === controller) {
         setStatus(null)
         setError(cause instanceof Error ? cause.message : 'Cannot reach model API.')
       }
@@ -81,16 +89,30 @@ export default function BaselineClassifier() {
 
   useEffect(() => {
     const controller = new AbortController()
-    setStatus(null)
-    setBusy(false)
-    setFile(null)
-    setResult(null)
-    setError(null)
-    void refreshStatus(controller, variant)
+    statusControllerRef.current = controller
+    // Initial loading is already represented by state. Set results after the request resolves.
+    void fetchModelStatus(variant, controller.signal)
+      .then(data => {
+        if (controller.signal.aborted || statusControllerRef.current !== controller) return
+        setStatus(data)
+        setError(null)
+      })
+      .catch((cause: unknown) => {
+        if (controller.signal.aborted || statusControllerRef.current !== controller) return
+        setStatus(null)
+        setError(cause instanceof Error ? cause.message : 'Cannot reach model API.')
+      })
+      .finally(() => {
+        if (statusControllerRef.current === controller) {
+          setStatusLoading(false)
+          statusControllerRef.current = null
+        }
+      })
     return () => {
       controller.abort()
       controllerRef.current?.abort()
       controllerRef.current = null
+      if (statusControllerRef.current === controller) statusControllerRef.current = null
     }
   }, [variant])
 
