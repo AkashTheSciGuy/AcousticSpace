@@ -95,6 +95,23 @@ def check_endpoints(*, require_models: bool = False, check_ast: bool = False) ->
 
         verify("health", get_health)
 
+        def schema() -> dict:
+            result = _expect(client.get("/openapi.json"))
+            expected_paths = {
+                "/health", "/api/audio/capabilities", "/api/audio/validate",
+                "/api/audio/inspect", "/api/audio/diagnostics",
+                "/api/rir/analyze", "/api/model/status",
+                "/api/model/predict", "/api/model/segments",
+                "/api/ast/status", "/api/ast/predict",
+            }
+            observed = set(result["paths"])
+            missing = sorted(expected_paths - observed)
+            if missing:
+                raise ValueError("Missing API routes: " + ", ".join(missing))
+            return {"required_routes": len(expected_paths)}
+
+        verify("openapi_contract", schema)
+
         def capabilities() -> dict:
             result = _expect(client.get("/api/audio/capabilities"))
             assert result["max_upload_bytes"] == 20 * 1024 * 1024
