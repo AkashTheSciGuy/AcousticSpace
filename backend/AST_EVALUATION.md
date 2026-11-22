@@ -8,6 +8,36 @@ The first locally trained Audio Spectrogram Transformer (`models/ast_model`) pro
 
 This first run is a **head-only classifier trained for one epoch**, NOT a fine-tuned AST encoder or a validated RIR mismatch detector. The uncalibrated softmax score is not forensic confidence.
 
+## New partial-encoder AST experiment — user-reported run (22 November 2026)
+
+A new local **partial-encoder** AST experiment successfully trained the **last one encoder layer** and binary classifier head on the RTX 3050 Laptop GPU with gradient checkpointing. Training used the same declared ASVspoof2019 LA manifest, `--epochs 3 --batch-size 1 --accumulate 4 --lr 0.00003 --selection-metric balanced_accuracy --patience 2 --train-last-layers 1 --gradient-checkpointing`, and wrote to a *new*, locally retained `models/ast_partial_top1_v1` checkpoint.
+
+The log reports **7,092,482 trainable parameters** of **86,190,338** (partial fine-tuning, not head-only and not full-encoder). These are **user-reported local validation metrics**, not independent test results:
+
+| Epoch | Train loss | Validation accuracy | Balanced accuracy | Fake recall | Fake precision | Fake F1 | Confusion matrix (real, fake) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 1 | 0.458584 | 85.00% | 83.50% | 80.00% | 71.11% | 75.29% | [[87,13],[8,32]] |
+| 2 | 0.244990 | 90.71% | 86.75% | 77.50% | 88.57% | 82.67% | [[96,4],[9,31]] |
+| 3 | 0.171978 | **91.43%** | **87.25%** | 77.50% | 91.18% | 83.78% | [[97,3],[9,31]] |
+
+Selected epoch: **3**, on the *same 140 validation clips* (100 real, 40 fake). At fixed threshold 0.5, **3/100 real recordings** were falsely flagged; **9/40 fakes** were missed. Validation balanced accuracy rose from the previous one-epoch head-only result of **57.0%** to **87.25%**. Because model selection used validation, the comparison should not be treated as independent generalization. The original held-out ASVspoof subset was previously examined in other experiments and is **not a pristine new holdout**.
+
+The training log showed a mel-filter warning and expected replacement of the AudioSet 527-way classification head with a new two-class layer; a deprecated checkpointing API warning did not prevent saving the checkpoint. None of these warnings alone establishes model validity.
+
+**Immediate next step — evaluate this saved checkpoint read-only on the declared validation split, not on a repeatedly examined test split:**
+
+~~~cmd
+cd /d F:\Projects\AcousticSpace\backend
+.venv\Scripts\python.exe scripts\evaluate_ast.py "F:\Datasets\ASVspoof2019\LA" "F:\Datasets\ASVspoof2019\manifest.csv" --model-dir models\ast_partial_top1_v1 --split val --threshold 0.5 --bootstrap-samples 500 --bootstrap-seed 42 --output models\ast_partial_top1_val_v1.json
+~~~
+
+The read-only evaluator reports additional **ROC-AUC**, average precision, real false-positive rate, 95% stratified bootstrap uncertainty and the manifest hash. It must agree with the training log's fixed-threshold confusion matrix. Bootstrap intervals on the same validation partition do not remove validation-selection bias. The output path refuses to overwrite an existing report.
+
+To load the checkpoint in the optional AST demo API **without changing the trained weights**, set `ACOUSTICSPACE_AST_MODEL` to the local folder in the backend CMD terminal before launching Uvicorn. The experimental baseline/acoustic logistic models remain separate.
+
+**Research status remains open:** A new independent external spoof test set, documented attack/speaker/recording provenance, and new physical-room RIR evidence are needed before claiming a deployable physics-based detector.
+
+
 ## A. Analyze the EXISTING checkpoint first
 
 From Windows CMD, in backend, with a working CUDA-enabled PyTorch and Transformers installation:

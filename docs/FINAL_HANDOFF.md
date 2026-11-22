@@ -94,6 +94,7 @@ These are previous user-reported local evaluations, not new independently reprod
 | ASVspoof 2019 LA subset, 3-feature model | **70.63% test accuracy** | Exploratory, within-dataset baseline, 160 test clips; official evaluation partition not used |
 | Same subset, 6-feature model | **68.75% test accuracy**, 76.67% fake recall | More fake recall but more false positives |
 | Local head-only AST v1 (1 epoch) | **47.14% validation accuracy**, 66% real-class false-positive rate on 140 clips | Neither reliable AST accuracy nor full encoder fine-tuning established |
+| Local partial-encoder AST top-one-layer (3 epochs) | **91.43% validation accuracy, 87.25% balanced accuracy**, 3/100 real false positives and 9/40 fake misses on 140 clips | User-reported validation; checkpoint saved locally, but independent external spoof accuracy and blind RIR performance not established |
 | Reference-aided measured-RIR consistency experiment | **93.75% validation accuracy** and **50% held-out test accuracy**, 16 per split | Weak generalization; labels identify synthetic room assignment, **not genuine/fake audio** |
 
 The original RIR test split was examined; do not tune models, features or thresholds against it. A larger independently sourced and pre-registered experiment would be needed for new accuracy claims. Physical room provenance and microphone acquisition protocols still require confirmation.
@@ -103,6 +104,8 @@ The local RIR archive contained 226 decodable PCM-16, 16-kHz candidate files. A 
 ## Scope/acceptance decision
 
 The **software engineering prototype** is demonstrable for the internship once the verification command passes and the dashboard/API operate as documented. Acceptance against the full original internship specification still requires real scientific evaluation evidence and mentor review. If classifier-backed predictions are part of the live demonstration, strict verification must pass on the actual machine.
+
+The newer AST experiment successfully updated part of the encoder on the RTX 3050; it is **not full-encoder fine-tuning**. See `backend/AST_EVALUATION.md` for detailed training outcomes and the read-only validation command. The previously seen test split should not be reused for model selection.
 
 The **original full research goal** remains scientifically unproven: it would require validated separation and independent acoustic-response estimation from a mixed speech recording, fully evaluated transformer training, independently labeled breathing/phonetics, real tamper-localization ground truth, and a genuinely new held-out room dataset.
 

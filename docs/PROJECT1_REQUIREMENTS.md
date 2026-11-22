@@ -10,7 +10,7 @@ Basis: user-provided `PROJECT(1).pdf`, Project 1 on pages 1–2. This document d
 | Extract environmental reverb or RIR *from speech* | Isolated RIR WAV analyzer `rir_analysis.py`; ordinary speech features remain confounded | **Not achieved** |
 | Baseline CNN/Transformer | Three-/six-feature logistic regression baselines; locally reported one-epoch AST head-only experiment | Baselines evaluated; head-only AST result is not a validated CNN/fine-tuned Transformer |
 | Mid-review voice/background separation | Not demonstrated; mixed mono speech does not identify a unique blind room response | **Not achieved** |
-| Fine-tune Hugging Face AST | `scripts/train_ast.py`, optional dependencies, `/api/ast/status` and `/api/ast/predict`; local v1 head-only run documented in `backend/AST_EVALUATION.md` | Partial: 47.14% validation accuracy from reported head-only run; full encoder fine-tuning and independent test **not verified** |
+| Fine-tune Hugging Face AST | `scripts/train_ast.py`, optional dependencies, `/api/ast/status` and `/api/ast/predict`; local last-one-layer partial-encoder fine-tune completed on RTX 3050 (3 epochs) | **91.43% accuracy, 87.25% balanced accuracy on 140 validation files** (user-reported); independent new test and full-encoder fine-tune **not verified** |
 | Check breathing cadence versus syllables | Exploratory energy peaks/noisy quiet intervals; `scripts/evaluate_annotations.py` measures their agreement with separately supplied event labels | Instrumented; **independent breath/syllable validation still missing** |
 | Suspicious segments in results UI | `segment_analysis.py`, `SegmentReview.tsx`, overlapping classifier windows; optional annotated time-IoU evaluation | Functional exploratory scores; **independent tamper localization validation still missing** |
 | Prediction display | `BaselineClassifier.tsx` + `AcousticComparison.tsx` | Implemented; values are uncalibrated classifier scores |
@@ -29,6 +29,8 @@ The new `scripts/validate_rir_provenance.py` checks a **manually curated** physi
 This implements a structural guard **only**. The current 226-file candidate archive has **not** passed independent human physical-room verification, and no new held-out accuracy or real deepfake results are available.
 
 For repeatable local processing-time instrumentation, see [API latency benchmark](LATENCY_BENCHMARK.md). Actual target-machine measurements are still required.
+
+A later RTX 3050 partial-AST experiment updated the last encoder layer, achieved 91.43% validation accuracy (87.25% balanced accuracy) and retained its checkpoint as `backend/models/ast_partial_top1_v1`. This is a **validation result**, not an independent generalization claim. See `backend/AST_EVALUATION.md` for the epoch results and precise provenance.
 
 ## Experimental baseline results (user-supplied local run)
 
