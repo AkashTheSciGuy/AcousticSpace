@@ -68,6 +68,30 @@ def test_manifest_rejects_original_audio_hash_overlap(corpus):
         external.load_external_records(root, manifest, original)
 
 
+def test_external_rejects_declared_speaker_overlap_with_training_manifest(corpus):
+    root, manifest, original, rows = corpus
+    _csv(original, [{
+        "path": "training.flac",
+        "label": "real",
+        "sha256": "1" * 64,
+        "group": rows[0]["group"],
+        "source_reference": "real-original-train",
+    }])
+    with pytest.raises(ValueError, match="source group overlaps"):
+        external.load_external_records(root, manifest, original)
+
+
+def test_external_rejects_missing_training_group_column(corpus):
+    root, manifest, original, _ = corpus
+    _csv(original, [{
+        "path": "training.flac",
+        "label": "fake",
+        "sha256": "1" * 64,
+    }], columns=("path", "label", "sha256"))
+    with pytest.raises(ValueError, match="requires sha256, label and group"):
+        external.load_external_records(root, manifest, original)
+
+
 def test_manifest_rejects_unverified_audio_bytes(corpus):
     root, manifest, original, rows = corpus
     rows[0]["sha256"] = "0" * 64
