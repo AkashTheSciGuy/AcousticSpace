@@ -1,5 +1,6 @@
 """Score existing AST checkpoints with a stubbed inference runtime (no GPU required)."""
 from contextlib import nullcontext
+import hashlib
 from types import SimpleNamespace
 
 import numpy as np
@@ -36,7 +37,9 @@ class FakeTorch:
         return logits
 
 
-def test_evaluate_checkpoint_reads_only_requested_split(monkeypatch):
+def test_evaluate_checkpoint_reads_only_requested_split(monkeypatch, tmp_path):
+    manifest = tmp_path / "manifest.csv"
+    manifest.write_text("stubbed split_rows uses synthetic recordings", encoding="utf-8")
     rows = {"train": [("train.wav", 0)], "val": [("real.wav", 0), ("fake.wav", 1)],
             "test": [("test.wav", 1)]}
     visited = []
@@ -56,8 +59,10 @@ def test_evaluate_checkpoint_reads_only_requested_split(monkeypatch):
         return SimpleNamespace(logits=FakeTensor([[1 - fake, fake]]))
     monkeypatch.setattr(evaluate_ast, "forward_ast", fake_forward)
 
-    report = evaluate_ast.evaluate_checkpoint("root", "manifest", "model",
+    report = evaluate_ast.evaluate_checkpoint("root", manifest, "model",
                                               split="val", select_threshold=True)
+    assert report["dataset_manifest_sha256"] == hashlib.sha256(manifest.read_bytes()).hexdigest()
+    assert report["reported_training_mode"] == "unknown"
     assert visited == ["real.wav", "fake.wav"]
     assert report["metrics"]["accuracy"] == 1.0
     assert report["metrics"]["confusion_matrix_real_fake"] == [[1, 0], [0, 1]]
