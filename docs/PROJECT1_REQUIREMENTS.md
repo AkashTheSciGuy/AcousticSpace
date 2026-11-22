@@ -8,9 +8,9 @@ Basis: user-provided `PROJECT(1).pdf`, Project 1 on pages 1–2. This document d
 | React dashboard and waveform player | `frontend/src/components/AudioUpload.tsx`, `AudioPreview.tsx` | Implemented; Vite build/lint in CI |
 | Librosa processing and log-mel spectrogram | `preprocessing.py`, `features.py`, `speech_diagnostics.py` | Implemented signal analysis, not source/RIR isolation |
 | Extract environmental reverb or RIR *from speech* | Isolated RIR WAV analyzer `rir_analysis.py`; ordinary speech features remain confounded | **Not achieved** |
-| Baseline CNN/Transformer | Three-/six-feature logistic regression baselines; optional AST training workflow | Baselines evaluated; no trained CNN/AST |
+| Baseline CNN/Transformer | Three-/six-feature logistic regression baselines; locally reported one-epoch AST head-only experiment | Baselines evaluated; head-only AST result is not a validated CNN/fine-tuned Transformer |
 | Mid-review voice/background separation | Not demonstrated; mixed mono speech does not identify a unique blind room response | **Not achieved** |
-| Fine-tune Hugging Face AST | `scripts/train_ast.py`, optional dependencies, `/api/ast/status` and `/api/ast/predict` | Script/API implemented; **no model training / evaluation verified** |
+| Fine-tune Hugging Face AST | `scripts/train_ast.py`, optional dependencies, `/api/ast/status` and `/api/ast/predict`; local v1 head-only run documented in `backend/AST_EVALUATION.md` | Partial: 47.14% validation accuracy from reported head-only run; full encoder fine-tuning and independent test **not verified** |
 | Check breathing cadence versus syllables | Energy peaks and noisy quiet intervals `speech_diagnostics.py` | Exploration only; **not validated breath/syllable alignment** |
 | Suspicious segments in results UI | `segment_analysis.py`, `SegmentReview.tsx`, overlapping classifier windows | Functional exploratory scores; **not validated tamper localization** |
 | Prediction display | `BaselineClassifier.tsx` + `AcousticComparison.tsx` | Implemented; values are uncalibrated classifier scores |
@@ -33,6 +33,8 @@ Dataset: ASVspoof 2019 LA subset; 400 train, 140 validation, 160 test. The origi
 These are exploratory dataset-specific results, not independent forensic benchmark performance. Do not use scores as calibrated probabilities.
 
 ## Repeatable verification
+
+Use `verify_local_demo.cmd` from the repository root for backend tests, in-process HTTP smoke checks, frontend build and lint; add `--require-models` to require trained baseline/candidate models and a comparison report. Read `docs/FINAL_HANDOFF.md` for precise pass criteria.
 
 Backend from `backend/`:
 
