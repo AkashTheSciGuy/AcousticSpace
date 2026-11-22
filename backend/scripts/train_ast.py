@@ -65,6 +65,57 @@ def accumulation_divisor(step: int, total: int, accumulate: int) -> int:
     return min(accumulate, total - group_first)
 
 
+
+def configure_trainable_ast(model, *, train_last_layers: int = 0,
+                            full_finetune: bool = False) -> dict:
+    """Select head-only, partial-encoder, or full-encoder fine-tuning.
+
+    Supports the 4.x AST encoder.layer and 5.x AST layers layouts.
+    Fails rather than silently falling back to training only the head.
+    """
+    if type(train_last_layers) is not int or train_last_layers < 0:
+        raise ValueError("train_last_layers must be a nonnegative integer.")
+    if type(full_finetune) is not bool or (full_finetune and train_last_layers):
+        raise ValueError("Choose either full_finetune or train_last_layers, not both.")
+    for parameter in model.parameters():
+        parameter.requires_grad_(full_finetune)
+    if full_finetune:
+        mode = "full_encoder_finetune"
+    else:
+        classifier = getattr(model, "classifier", None)
+        backbone = getattr(model, "audio_spectrogram_transformer", None)
+        if classifier is None or backbone is None:
+            raise RuntimeError("Expected a compatible AST classifier and encoder.")
+        for parameter in classifier.parameters():
+            parameter.requires_grad_(True)
+        mode = "head_only"
+        if train_last_layers:
+            old_encoder = getattr(backbone, "encoder", None)
+            layers = getattr(old_encoder, "layer", None)
+            if layers is None:
+                layers = getattr(backbone, "layers", None)
+            if layers is None or not 1 <= train_last_layers <= len(layers):
+                raise ValueError("AST encoder has fewer layers than requested or unsupported layout.")
+            for layer in list(layers)[-train_last_layers:]:
+                for parameter in layer.parameters():
+                    parameter.requires_grad_(True)
+            final_norm = getattr(backbone, "layernorm", None)
+            if final_norm is not None:
+                for parameter in final_norm.parameters():
+                    parameter.requires_grad_(True)
+            mode = "partial_encoder_finetune"
+    total = sum(parameter.numel() for parameter in model.parameters())
+    trainable = sum(parameter.numel() for parameter in model.parameters()
+                    if parameter.requires_grad)
+    if not trainable:
+        raise RuntimeError("No trainable AST parameters found.")
+    return {
+        "mode": mode, "train_last_layers": train_last_layers,
+        "trainable_parameters": trainable, "total_parameters": total,
+    }
+
+
+
 def train(args) -> dict:
     # Only import large optional ML dependencies when training is explicitly requested.
     try:
@@ -78,6 +129,10 @@ def train(args) -> dict:
         raise ValueError("Epochs, batch size and gradient accumulation must be positive.")
     if args.patience < 0 or not np.isfinite(args.lr) or args.lr <= 0:
         raise ValueError("Patience must be nonnegative and learning rate must be positive.")
+    if type(args.train_last_layers) is not int or args.train_last_layers < 0:
+        raise ValueError("train_last_layers must be a nonnegative integer.")
+    if args.full_finetune and args.train_last_layers:
+        raise ValueError("Choose full_finetune OR train_last_layers.")
     if args.output.exists():
         raise FileExistsError("AST output directory already exists; choose a new output.")
     grouped = split_rows(args.dataset, args.manifest)
@@ -93,11 +148,18 @@ def train(args) -> dict:
         id2label={0: "real", 1: "fake"}, label2id=LABEL_MAP,
         trust_remote_code=False,
     )
-    if not args.full_finetune:
-        for name, parameter in model.named_parameters():
-            parameter.requires_grad = name.startswith("classifier.")
-    if not any(parameter.requires_grad for parameter in model.parameters()):
-        raise RuntimeError("No trainable AST parameters found.")
+    trainable_config = configure_trainable_ast(
+        model, train_last_layers=args.train_last_layers,
+        full_finetune=args.full_finetune,
+    )
+    if args.gradient_checkpointing:
+        if not getattr(model, "supports_gradient_checkpointing", False):
+            raise RuntimeError("Installed AST model does not support gradient checkpointing.")
+        model.gradient_checkpointing_enable(
+            gradient_checkpointing_kwargs={"use_reentrant": False}
+        )
+    print(json.dumps({"training_configuration": trainable_config,
+                      "gradient_checkpointing": args.gradient_checkpointing}), flush=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
@@ -129,8 +191,18 @@ def train(args) -> dict:
         model.train()
         # Prevent train-mode stochastic changes inside the *frozen* encoder.
         # The new classification head remains in training mode.
-        if not args.full_finetune:
+        if trainable_config["mode"] == "head_only":
             model.audio_spectrogram_transformer.eval()
+        elif trainable_config["mode"] == "partial_encoder_finetune":
+            backbone = model.audio_spectrogram_transformer
+            backbone.eval()
+            layers = getattr(getattr(backbone, "encoder", None), "layer", None)
+            if layers is None:
+                layers = backbone.layers
+            for layer in list(layers)[-args.train_last_layers:]:
+                layer.train()
+            if getattr(backbone, "layernorm", None) is not None:
+                backbone.layernorm.train()
         optimizer.zero_grad(set_to_none=True)
         train_loss_sum = 0.0
         for step, (input_values, labels) in enumerate(train_loader, 1):
@@ -187,6 +259,12 @@ def train(args) -> dict:
         "val_count": len(grouped["val"]),
         "test_count": len(grouped["test"]),
         "full_finetune": args.full_finetune,
+        "train_last_layers": args.train_last_layers,
+        "training_mode": trainable_config["mode"],
+        "trainable_parameters": trainable_config["trainable_parameters"],
+        "total_parameters": trainable_config["total_parameters"],
+        "gradient_checkpointing": args.gradient_checkpointing,
+        "seed": args.seed,
         "learning_rate": args.lr,
         "gradient_accumulation": args.accumulate,
         "early_stopping_patience": args.patience,
@@ -214,6 +292,10 @@ def main():
     parser.add_argument("--patience", type=int, default=0,
                         help="Stop after this many epochs without improvement (0 disables).")
     parser.add_argument("--full-finetune", action="store_true")
+    parser.add_argument("--train-last-layers", type=int, default=0,
+                        help="Update last N encoder layers + classifier, instead of only classifier.")
+    parser.add_argument("--gradient-checkpointing", action="store_true",
+                        help="Reduce activation memory during encoder training (slower).")
     parser.add_argument("--evaluate-test", action="store_true")
     args = parser.parse_args()
     print(json.dumps(train(args), indent=2))
