@@ -24,14 +24,29 @@ Selected epoch: **3**, on the *same 140 validation clips* (100 real, 40 fake). A
 
 The training log showed a mel-filter warning and expected replacement of the AudioSet 527-way classification head with a new two-class layer; a deprecated checkpointing API warning did not prevent saving the checkpoint. None of these warnings alone establishes model validity.
 
-**Immediate next step — evaluate this saved checkpoint read-only on the declared validation split, not on a repeatedly examined test split:**
+**Read-only checkpoint evaluation completed and confirmed (22 November 2026).**
 
-~~~cmd
-cd /d F:\Projects\AcousticSpace\backend
-.venv\Scripts\python.exe scripts\evaluate_ast.py "F:\Datasets\ASVspoof2019\LA" "F:\Datasets\ASVspoof2019\manifest.csv" --model-dir models\ast_partial_top1_v1 --split val --threshold 0.5 --bootstrap-samples 500 --bootstrap-seed 42 --output models\ast_partial_top1_val_v1.json
-~~~
+The user ran the read-only AST evaluator against the locally saved checkpoint at `models/ast_partial_top1_v1` on the original 140-clip validation partition, fixed threshold 0.5, with 500 seed-42 stratified bootstrap samples. The saved model reproduced **exactly** the training log's confusion matrix `[[97,3],[9,31]]`, validation accuracy **91.43%**, balanced accuracy **87.25%**, fake recall **77.5%**, fake precision **91.18%** and fake F1 **83.78%**.
 
-The read-only evaluator reports additional **ROC-AUC**, average precision, real false-positive rate, 95% stratified bootstrap uncertainty and the manifest hash. It must agree with the training log's fixed-threshold confusion matrix. Bootstrap intervals on the same validation partition do not remove validation-selection bias. The output path refuses to overwrite an existing report.
+Additional reported metrics:
+
+| Read-only validation metric | Value |
+| --- | ---: |
+| Real specificity | 97.00% |
+| Real false-positive rate | **3.00%** |
+| ROC-AUC | **0.9215** |
+| Average precision, fake class | **0.893543** |
+| Balanced-accuracy 95% stratified bootstrap interval | **79.86875%–93.50%** |
+| ROC-AUC 95% bootstrap interval | **0.85385625–0.97275** |
+| Real false-positive rate 95% bootstrap interval | **0.00%–7.00%** |
+| Fake recall 95% bootstrap interval | **65.0%–90.0%** |
+| Fake F1 95% bootstrap interval | **73.10%–92.00%** |
+
+Manifest SHA-256: `1754879b8550e6c6c403d70d13698b77f9f2d952ed691699a38768c85a3a55a7`. The output is stored locally under `models/ast_partial_top1_val_v1.json`, **not** in the repository.
+
+All reported intervals are class-stratified example-level bootstrap uncertainty on the **same already-used validation partition**. They do not account for speaker/room/source correlations, data shift or model selection on validation. None is an independent test accuracy or a calibrated forensic confidence claim.
+
+**Next step: freeze this checkpoint and 0.5 decision threshold, then evaluate once against an externally sourced and independently labeled spoof corpus**, with exact-file overlap checks and verified source provenance. See [external AST validation](../docs/AST_EXTERNAL_VALIDATION.md). The previously inspected subset labeled `test` in the 2019 manifest should not be treated as new, untouched evidence.
 
 To load the checkpoint in the optional AST demo API **without changing the trained weights**, set `ACOUSTICSPACE_AST_MODEL` to the local folder in the backend CMD terminal before launching Uvicorn. The experimental baseline/acoustic logistic models remain separate.
 
