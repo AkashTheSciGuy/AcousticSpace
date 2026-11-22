@@ -23,6 +23,21 @@ This second command fails if either classifier is unavailable; it never silently
 
 The JSON includes Python version, platform, route names, sample counts and minimum/median/95th-percentile/maximum processing milliseconds. Results are specific to the installed machine and the provided fixture lengths. This tool refuses to overwrite prior reports.
 
+## Measure longer clips, not only the one-second smoke fixture
+
+The original benchmark reported one-second generated tone input. Different input durations can have very different decoding, feature extraction and model-scoring costs. The tool now supports `--clip-seconds` from 1 to 60 (an integer). This changes the **speech-facing** upload, inspection, diagnostics and baseline/candidate prediction fixtures; the isolated-RIR and four-input reference fixtures stay fixed in length.
+
+For example, after preserving your existing `api_latency_windows_v1.json`, generate two **new** reports:
+
+~~~cmd
+.venv\Scripts\python.exe scripts\benchmark_api.py --clip-seconds 10 --iterations 20 --include-models --output models\api_latency_windows_10s.json
+.venv\Scripts\python.exe scripts\benchmark_api.py --clip-seconds 30 --iterations 20 --include-models --output models\api_latency_windows_30s.json
+~~~
+
+To probe the maximum declared 60-second inspection window, use a different report filename and `--clip-seconds 60`. Longer runs are expected to take more time; benchmark results must not be assumed in advance.
+
+These are generated harmonic test tones, **not speech or spoof samples**. Results measure processing overhead, not classification reliability. Compare the same routes across reports and keep the test machine, dependencies and conditions consistent. The report includes `speech_clip_duration_seconds` so values are not accidentally compared without knowing input length.
+
 ## What the benchmark does NOT prove
 
 - It does **not** include live network transmission, reverse-proxy latency, browser rendering, or internet upload time.
