@@ -17,6 +17,25 @@ def test_checkpoint_training_metadata_unknown_without_proven_local_record(tmp_pa
     )
     assert reported_training_mode(tmp_path) == "full_encoder_finetune"
 
+def test_checkpoint_training_mode_identifies_partial_encoder(tmp_path):
+    metadata = tmp_path / "training_meta.json"
+    metadata.write_text(json.dumps({
+        "full_finetune": False,
+        "train_last_layers": 1,
+        "training_mode": "partial_encoder_finetune",
+    }), encoding="utf-8")
+    assert reported_training_mode(tmp_path) == "partial_encoder_finetune"
+    metadata.write_text(json.dumps({
+        "full_finetune": True, "train_last_layers": 1,
+    }), encoding="utf-8")
+    assert reported_training_mode(tmp_path) == "unknown"
+    metadata.write_text(json.dumps({
+        "full_finetune": False, "train_last_layers": "one",
+    }), encoding="utf-8")
+    assert reported_training_mode(tmp_path) == "unknown"
+
+
+
 
 @pytest.mark.parametrize("content", [
     '{"full_finetune": "false"}', '{"full_finetune": 1}',
