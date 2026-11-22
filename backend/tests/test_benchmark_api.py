@@ -1,9 +1,12 @@
 """Integration checks for reproducible in-process API latency reports."""
+import io
 import json
+
+import soundfile as sf
 
 import pytest
 
-from scripts.benchmark_api import main, run_benchmark
+from scripts.benchmark_api import main, run_benchmark, speech_fixture
 
 
 def test_benchmark_measures_real_http_routes_without_models(tmp_path, monkeypatch):
@@ -52,3 +55,34 @@ def test_benchmark_cli_rejects_invalid_options(tmp_path):
     path = tmp_path / "invalid.json"
     assert main(["--iterations", "0", "--output", str(path)]) == 2
     assert not path.exists()
+
+
+def test_variable_length_fixture_is_bounded_mono_wav():
+    for seconds in (1, 2, 10, 60):
+        with sf.SoundFile(io.BytesIO(speech_fixture(seconds))) as source:
+            assert source.format == "WAV"
+            assert source.samplerate == 16000
+            assert source.channels == 1
+            assert source.frames == seconds * 16000
+
+
+@pytest.mark.parametrize("seconds", [0, -1, 61, 1.5, "10", True])
+def test_variable_length_fixture_rejects_invalid_duration(seconds):
+    with pytest.raises(ValueError, match="clip_seconds"):
+        speech_fixture(seconds)
+    with pytest.raises(ValueError, match="clip_seconds"):
+        run_benchmark(iterations=1, clip_seconds=seconds)
+
+
+def test_benchmark_records_two_second_clip_duration(tmp_path):
+    result = run_benchmark(iterations=1, clip_seconds=2)
+    assert result["status"] == "measured"
+    assert result["speech_clip_duration_seconds"] == 2
+    assert result["routes"]["inspect_audio"]["samples"] == 1
+
+
+def test_cli_accepts_explicit_speech_duration(tmp_path):
+    output = tmp_path / "two_seconds.json"
+    assert main(["--iterations", "1", "--clip-seconds", "2", "--output", str(output)]) == 0
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert report["speech_clip_duration_seconds"] == 2
