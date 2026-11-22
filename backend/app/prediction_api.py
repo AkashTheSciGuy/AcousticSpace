@@ -1,4 +1,5 @@
 """Experimental model readiness and audio inference endpoints."""
+import asyncio
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Annotated, Literal
@@ -11,6 +12,11 @@ from app.preprocessing import load_audio
 
 router = APIRouter(prefix='/api/model', tags=['experimental-model'])
 ModelVariant = Literal['baseline', 'acoustic']
+
+
+def _predict_recording(path: Path, variant: ModelVariant) -> dict:
+    """Decode and classify on a worker without blocking other API requests."""
+    return predict_audio(load_audio(path), variant)
 
 
 @router.get('/status')
@@ -26,7 +32,7 @@ async def predict_uploaded_audio(
     """Use baseline by default; acoustic inference requires a separately trained artifact."""
     temp_path: Path | None = None
     try:
-        state = model_status(variant)
+        state = await asyncio.to_thread(model_status, variant)
         if not state['available']:
             raise HTTPException(status_code=503, detail=state['message'])
         filename = (file.filename or '').replace('\\', '/').rsplit('/', 1)[-1]
@@ -49,8 +55,7 @@ async def predict_uploaded_audio(
                     raise HTTPException(status_code=413, detail='Audio exceeds the 20 MiB limit.')
                 stream.write(chunk)
         try:
-            audio = load_audio(temp_path)
-            result = predict_audio(audio, variant)
+            result = await asyncio.to_thread(_predict_recording, temp_path, variant)
         except ModelUnavailableError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         except (ValueError, OSError, RuntimeError) as exc:
