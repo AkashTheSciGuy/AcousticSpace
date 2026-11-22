@@ -60,9 +60,13 @@ def test_evaluate_checkpoint_reads_only_requested_split(monkeypatch, tmp_path):
     monkeypatch.setattr(evaluate_ast, "forward_ast", fake_forward)
 
     report = evaluate_ast.evaluate_checkpoint("root", manifest, "model",
-                                              split="val", select_threshold=True)
+                                              split="val", select_threshold=True,
+                                              bootstrap_samples=20, bootstrap_seed=17)
     assert report["dataset_manifest_sha256"] == hashlib.sha256(manifest.read_bytes()).hexdigest()
     assert report["reported_training_mode"] == "unknown"
+    assert report["uncertainty"]["bootstrap_samples"] == 20
+    assert report["uncertainty"]["fixed_threshold"] == 0.5
+    assert report["uncertainty"]["metrics"]["balanced_accuracy"]["point_estimate"] == 1.0
     assert visited == ["real.wav", "fake.wav"]
     assert report["metrics"]["accuracy"] == 1.0
     assert report["metrics"]["confusion_matrix_real_fake"] == [[1, 0], [0, 1]]
