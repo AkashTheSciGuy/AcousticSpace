@@ -48,6 +48,8 @@ Prior within-dataset validation: **91.43%** accuracy, **87.25%** balanced accura
 
 This experiment tests a different, previously unused official evaluation partition (provided no one has tuned against it). It does **not** establish cross-dataset generalization; follow docs/AST_EXTERNAL_VALIDATION.md for an external corpus such as ASVspoof 2021 DF.
 
-No genuine result can be produced until the commands run on the operator's local FLAC files and saved AST checkpoint. Synthetic CI files test the **code**, not deepfake detection science. RIR independence, breath annotations and tamper-localization evidence remain open as described in docs/PROJECT1_REQUIREMENTS.md.
+**Completed 22 November 2026:** Both commands were run on the local official FLAC files and saved checkpoint without changing the threshold. The fixed manifest had SHA-256 7b0c6e3b12c170b8b59ffba95644f382023d8a82142a4e4cfb37e83e41dac0d2. On 200 official-partition recordings, the user-reported evaluation yielded **87.00% balanced accuracy, ROC-AUC 0.9500, genuine FPR 1.00%, fake recall 75.00%**, and confusion matrix [[99,1],[25,75]]. The 500-sample stratified bootstrap gave balanced accuracy 95% interval **82.5%–91.0%**. See [fixed official 2019 evaluation results](AST_2019_EVAL_RESULTS_2026-11-22.md) for the complete metrics, manifest/protocol hashes and limitations.
+
+Synthetic CI files test the **code**, not deepfake detection science. RIR independence, breath annotations and tamper-localization evidence remain open as described in docs/PROJECT1_REQUIREMENTS.md.
 
 Original audio and model weights remain local, no dataset or checkpoint is overwritten, and nothing from the private local corpus is committed to GitHub.
