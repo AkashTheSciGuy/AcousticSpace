@@ -49,7 +49,7 @@ def test_reference_aided_endpoint_returns_finite_descriptors_not_verdict():
     assert payload["status"] == "analyzed"
     assert payload["sample_rate_hz"] == 16000
     assert payload["prediction"] is None
-    assert "dry_speech" in " ".join(payload["limitations"])
+    assert "dry speech" in " ".join(payload["limitations"])
     assert len(payload["features"]) == 7
     assert set(payload["feature_names"]) == set(payload["features"])
     assert all(np.isfinite(list(payload["features"].values())))
