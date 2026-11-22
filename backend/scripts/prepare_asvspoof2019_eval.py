@@ -21,6 +21,7 @@ import csv
 import hashlib
 import json
 import random
+import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -65,7 +66,7 @@ def _read_eval_protocol(root: Path) -> tuple[list[dict], Path]:
             if len(fields) != 5:
                 raise ValueError(f"Protocol line {line}: expected five official fields.")
             speaker, utterance, unused, attack, label = fields
-            if not speaker.startswith("LA_") or not utterance.startswith("LA_E_"):
+            if not re.fullmatch(r"LA_[0-9]{4}", speaker) or not re.fullmatch(r"LA_E_[0-9]{7}", utterance):
                 raise ValueError(f"Protocol line {line}: unexpected evaluation speaker/utterance ID.")
             if unused != "-" or label not in ("bonafide", "spoof"):
                 raise ValueError(f"Protocol line {line}: unsupported official label or field.")
