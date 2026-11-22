@@ -116,12 +116,12 @@ def test_duplicate_protocol_utterance_fails_closed(official_fixture, tmp_path):
 def test_incomplete_eval_source_refuses_manifest_write(official_fixture, tmp_path):
     root, protocol = official_fixture
     data = protocol.read_text(encoding="utf-8")
-    spoof_id = data.splitlines()[-1].split()[1]
-    # Force all fake candidates to require checking this missing file.
-    (root / "ASVspoof2019_LA_eval" / "flac" / (spoof_id + ".flac")).unlink()
+    real_id = data.splitlines()[0].split()[1]
+    # Selecting all nine genuine recordings guarantees this missing source is checked.
+    (root / "ASVspoof2019_LA_eval" / "flac" / (real_id + ".flac")).unlink()
     target = tmp_path / "incomplete.csv"
     with pytest.raises(ValueError, match="Selected official FLAC missing"):
-        create_manifest(root, target, per_class=18)
+        create_manifest(root, target, per_class=9)
     assert not target.exists()
 
 
