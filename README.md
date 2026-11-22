@@ -13,7 +13,7 @@
 - Trained local baseline and opt-in six-feature experimental candidate, both served through FastAPI.
 - Validation/test metric reports, confusion matrices and the feature comparison dashboard.
 - Exploratory overlapping-window score timeline, session-only metadata history, and log-mel spectrogram/cadence observations (not validated spoof localization or breath detection).
-- Optional Hugging Face AST checkpoint training/inference interfaces; unavailable until a real local AST model is trained.
+- Optional Hugging Face AST checkpoint training/inference interfaces; a local one-epoch head-only experiment was reported but achieved weak validation performance. Model weights are not included in GitHub.
 - Docker Compose local demo with Nginx and FastAPI, plus GitHub Actions CI.
 
 ## Start locally (Windows CMD)
@@ -40,6 +40,12 @@ npm run dev
 ```
 
 Open http://localhost:5173 . Vite proxies `/api` to the backend on port 8000.
+
+## Final one-command demo verification (Windows)
+
+From the repository root, run `verify_local_demo.cmd` to execute backend tests, in-process API smoke tests, a frontend production build, and lint. For a demonstration that **requires** trained baseline and candidate classifiers, run `verify_local_demo.cmd --require-models`; this fails if local models or the comparison report are missing. The smoke tests do not measure forensic or model accuracy.
+
+See [Final handoff](docs/FINAL_HANDOFF.md) for the demo sequence, local acceptance criteria, recorded model limitations, and what to submit.
 
 ## Local model training and verification
 
@@ -77,8 +83,8 @@ See [docs/DOCKER.md](docs/DOCKER.md). The demo uses Docker Compose with a read-o
 
 ## What remains unverified or unfinished
 
-The original PDF calls for a **trained** AST model, physics-based RIR extraction from speech, true syllable/breath alignment, validated suspicious-segment localization, robust independent accuracy and deployment readiness. The optional AST trainer is present, but no AST training has been performed or verified on the user's hardware. The spectrogram, timing peaks and window scores are observational/experimental rather than validated physical or forensic inference. The RIR analyzer remains separate and requires a measured or simulated impulse response. Public production hardening, latency benchmarking and external-dataset evaluation remain research/engineering work.
+The original PDF calls for a **fine-tuned** AST model, physics-based RIR extraction from speech, true syllable/breath alignment, validated suspicious-segment localization, robust independent accuracy and deployment readiness. A one-epoch, **head-only** AST training run was reported locally (47.14% validation accuracy on 140 clips), but end-to-end encoder fine-tuning and independent accuracy have not been established. The spectrogram, timing peaks and window scores are observational/experimental rather than validated physical or forensic inference. The RIR analyzer remains separate and requires a measured or simulated impulse response. Public production hardening, latency benchmarking and external-dataset evaluation remain research/engineering work.
 
 See [Project 1 requirements checklist](docs/PROJECT1_REQUIREMENTS.md) and [AST training instructions](backend/AST_TRAINING.md) for exact coverage.
 
-See [backend/DAY20_DELIVERY.md](backend/DAY20_DELIVERY.md) for the final local demo checklist. GitHub Actions runs backend tests and frontend checks on new pull requests.
+See [Final local demo handoff](docs/FINAL_HANDOFF.md) for a one-command Windows verification checklist and honest project acceptance scope. See [backend/DAY20_DELIVERY.md](backend/DAY20_DELIVERY.md) for the earlier research-prototype milestone. GitHub Actions runs backend tests and frontend checks on new pull requests.

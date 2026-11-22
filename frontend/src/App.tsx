@@ -10,7 +10,7 @@ const pipelineSteps = [
   { number: '01', title: 'Audio intake', description: 'Choose and validate a recording.', status: 'Working' },
   { number: '02', title: 'Waveform preview', description: 'Visualize the selected audio.', status: 'Working' },
   { number: '03', title: 'Acoustic analysis', description: 'Measure audio features and analyze an uploaded RIR.', status: 'Working' },
-  { number: '04', title: 'Experimental inference', description: 'Baseline and optional speech-acoustic candidate trained locally; model artifacts required on each device.', status: 'Working' },
+  { number: '04', title: 'Experimental inference', description: 'Baseline, speech-acoustic and AST inference require trusted locally trained artifacts.', status: 'Conditional' },
 ] as const
 
 function App() {
@@ -40,7 +40,7 @@ function App() {
       <main className="main-content">
         <header className="topbar">
           <span>AcousticSpace / Dashboard</span>
-          <span className="version">Research prototype · Day 20</span>
+          <span className="version">Research prototype · Local demo</span>
         </header>
         <section className="intro" aria-labelledby="page-title">
           <div className="eyebrow"><span aria-hidden="true" /> AUDIO FORENSICS</div>
@@ -72,7 +72,7 @@ function App() {
       <aside className="right-panel" aria-label="Development progress">
         <span className="section-label">DEVELOPMENT ROADMAP</span>
         <h2>Analysis pipeline</h2>
-        <p className="panel-caption">Working toward a complete upload-to-result flow.</p>
+        <p className="panel-caption">Implemented flows and optional research features.</p>
         <ol className="pipeline-list">
           {pipelineSteps.map((step) => (
             <li key={step.number} className="pipeline-step">
