@@ -2,7 +2,7 @@
 
 The official Project 1 PDF specifies an **Audio Spectrogram Transformer (AST)** fine-tuned for audio spoof detection. The preexisting logistic-regression models do not satisfy this part of the research objective.
 
-This optional script supplies a training workflow; **no AST weights are included or trained in GitHub**. The new AST endpoint must report unavailable until a locally trained model exists.
+This optional script supplies a training workflow; **no AST weights are included in GitHub**. The user's first local one-epoch head-only AST run is documented in `AST_EVALUATION.md` (47.14% validation accuracy); this is not full fine-tuning or independent evidence of deepfake accuracy. The AST endpoint reports unavailable when a compatible local checkpoint is not present.
 
 ## Important model and hardware requirements
 
@@ -24,7 +24,7 @@ The script verifies the grouped manifest, computes the AST log-mel features, tra
 
 Test metrics are omitted unless `--evaluate-test` is explicitly passed after model/hyperparameter selection. Repeated test usage can bias model decisions.
 
-Before running full fine-tuning, verify correct torch, torchaudio and transformers installations on the actual machine; the optional dependencies and training loop have not been exercised on the user's local GPU.
+Before attempting full encoder fine-tuning, verify correct torch, torchaudio and transformers installations and available GPU memory. The recorded local run trained the head only; full fine-tuning has not been demonstrated on the target 4 GB GPU.
 
 ## Follow-up evaluation and second experiment
 
