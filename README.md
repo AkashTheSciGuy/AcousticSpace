@@ -41,6 +41,12 @@ npm run dev
 
 Open http://localhost:5173 . Vite proxies `/api` to the backend on port 8000.
 
+## Final one-command demo verification (Windows)
+
+From the repository root, run `verify_local_demo.cmd` to execute backend tests, in-process API smoke tests, a frontend production build, and lint. For a demonstration that **requires** trained baseline and candidate classifiers, run `verify_local_demo.cmd --require-models`; this fails if local models or the comparison report are missing. The smoke tests do not measure forensic or model accuracy.
+
+See [Final handoff](docs/FINAL_HANDOFF.md) for the demo sequence, local acceptance criteria, recorded model limitations, and what to submit.
+
 ## Local model training and verification
 
 See [backend/DATASET_TRAINING.md](backend/DATASET_TRAINING.md), [backend/DAY3_CANDIDATE.md](backend/DAY3_CANDIDATE.md) and [backend/DAY20_DELIVERY.md](backend/DAY20_DELIVERY.md).
