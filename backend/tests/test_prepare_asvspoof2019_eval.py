@@ -143,6 +143,16 @@ def test_unexpected_eval_utterance_prefix_is_rejected(official_fixture, tmp_path
         create_manifest(root, tmp_path / "bad_prefix.csv", per_class=2)
 
 
+def test_protocol_utterance_path_injection_is_rejected(official_fixture, tmp_path):
+    root, protocol = official_fixture
+    data = protocol.read_text(encoding="utf-8")
+    data = data.replace("LA_E_0000001", "LA_E_../../secrets", 1)
+    protocol.write_text(data, encoding="utf-8")
+    with pytest.raises(ValueError, match="unexpected evaluation speaker/utterance"):
+        create_manifest(root, tmp_path / "unsafe.csv", per_class=2)
+    assert not (tmp_path / "unsafe.csv").exists()
+
+
 def test_new_manifest_is_accepted_by_external_evaluator(official_fixture, tmp_path):
     from scripts.evaluate_ast_external import load_external_records
     root, _ = official_fixture
