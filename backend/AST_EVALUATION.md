@@ -63,6 +63,18 @@ set "ACOUSTICSPACE_AST_MODEL=F:\Projects\AcousticSpace\backend\models\ast_model_
 
 Stop that server and clear/change the environment variable to return to v1. The dashboard still uses a fixed 0.5 decision threshold; alternative thresholds are **offline analysis only**.
 
+## E. Optional uncertainty estimates for fixed-threshold evaluation
+
+The offline evaluator now supports **seeded, class-stratified 95% nonparametric bootstrap intervals**. It resamples real and fake examples separately at a **fixed** threshold, then reports intervals for balanced accuracy, real false-positive rate, fake recall/F1 and ROC-AUC. For example, using your already trained v1 checkpoint and a **new report filename**:
+
+~~~cmd
+.venv\Scripts\python.exe scripts\evaluate_ast.py "F:\Datasets\ASVspoof2019\LA" "F:\Datasets\ASVspoof2019\manifest.csv" --model-dir models\ast_model --split val --threshold 0.5 --bootstrap-samples 500 --bootstrap-seed 42 --output models\ast_v1_uncertainty.json
+~~~
+
+These uncertainty intervals do **not** turn 47.14% accuracy into a reliable model, and they do **not** correct speaker/source/room correlations, dataset shift or threshold-selection bias. If the same validation set chooses a threshold, intervals on those data are optimistic. The evaluated checkpoint's `training_meta.json` is read only to **report** head-only/full-encoder status, never to infer unrecorded training.
+
+The output also contains the source manifest's SHA-256 checksum so later reports can identify an unchanged evaluation manifest. Model files are never overwritten.
+
 ## Important research limits
 
 Neither v1 nor v2 extracts a true room impulse response from speech; ASVspoof real/fake labels are not ground-truth room response measurements. These are experimental audio classifiers. A small ASVspoof subset does not support forensic deployment claims. The scoring code reports metrics transparently but does not guarantee good generalization.

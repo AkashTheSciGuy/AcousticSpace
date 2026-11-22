@@ -2,7 +2,8 @@
 import numpy as np
 import pytest
 
-from app.ast_metrics import classification_metrics, select_validation_threshold
+from app.ast_metrics import (bootstrap_binary_uncertainty, classification_metrics,
+                             select_validation_threshold)
 from scripts.evaluate_ast import evaluate_checkpoint, main
 
 
@@ -72,3 +73,37 @@ def test_existing_output_rejected_before_model_inference(tmp_path, monkeypatch, 
     assert error.value.code == 2
     assert "Output report already exists" in capsys.readouterr().err
     assert report.read_text(encoding="utf-8") == '{"sentinel": true}'
+
+
+def test_bootstrap_intervals_are_seeded_bounded_and_class_balanced():
+    labels = [0, 0, 0, 0, 1, 1]
+    scores = [.1, .2, .3, .8, .6, .9]
+    a = bootstrap_binary_uncertainty(labels, scores, samples=30, seed=9)
+    b = bootstrap_binary_uncertainty(labels, scores, samples=30, seed=9)
+    assert a == b
+    assert a["confidence_level"] == .95
+    assert a["real_count"] == 4
+    assert a["fake_count"] == 2
+    assert a["fixed_threshold"] == .5
+    for values in a["metrics"].values():
+        assert 0 <= values["ci95_lower"] <= values["ci95_upper"] <= 1
+        assert 0 <= values["point_estimate"] <= 1
+    assert "speaker/room/source correlations" in a["warning"]
+
+
+def test_bootstrap_constant_fake_scores_does_not_fail_when_classes_are_retained():
+    report = bootstrap_binary_uncertainty([0, 0, 1], [.4, .4, .4], samples=20)
+    assert report["metrics"]["roc_auc"]["ci95_lower"] == pytest.approx(.5)
+    assert report["metrics"]["roc_auc"]["ci95_upper"] == pytest.approx(.5)
+
+
+@pytest.mark.parametrize("samples", [-1, 0, 1, 19, 2001, 5.3, "20", True])
+def test_bootstrap_rejects_invalid_sample_count(samples):
+    with pytest.raises(ValueError, match="Bootstrap samples"):
+        bootstrap_binary_uncertainty([0, 1], [.2, .8], samples=samples)
+
+
+@pytest.mark.parametrize("seed", [-1, 1.5, "42", True, 2 ** 63])
+def test_bootstrap_rejects_invalid_seed(seed):
+    with pytest.raises(ValueError, match="Bootstrap seed"):
+        bootstrap_binary_uncertainty([0, 1], [.2, .8], samples=20, seed=seed)

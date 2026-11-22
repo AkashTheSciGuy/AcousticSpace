@@ -88,3 +88,61 @@ def select_validation_threshold(labels, fake_scores, *, objective="balanced_accu
             "No deployed prediction threshold has been changed."
         ),
     }
+
+
+def bootstrap_binary_uncertainty(labels, fake_scores, *, threshold=0.5,
+                                 samples=500, seed=42):
+    """Stratified 95% bootstrap intervals for a *fixed* decision threshold.
+
+    Each class is resampled separately so imbalanced/small samples retain
+    real and fake observations. Assumes independent examples *within class*;
+    source/room-correlated recordings can make these intervals optimistic.
+    Do not tune a threshold on test scores.
+    """
+    truth, scores = _validated(labels, fake_scores)
+    chosen = _threshold(threshold)
+    if type(samples) is not int or not 20 <= samples <= 2000:
+        raise ValueError("Bootstrap samples must be an integer between 20 and 2000.")
+    if type(seed) is not int or not 0 <= seed < 2 ** 63:
+        raise ValueError("Bootstrap seed must be a nonnegative bounded integer.")
+
+    real_idx = np.flatnonzero(truth == 0)
+    fake_idx = np.flatnonzero(truth == 1)
+    rng = np.random.default_rng(seed)
+    measured = ("balanced_accuracy", "real_false_positive_rate",
+                "recall_fake", "f1_fake", "roc_auc")
+    estimates = classification_metrics(truth, scores, threshold=chosen)
+    resampled = {name: np.empty(samples, dtype=np.float64) for name in measured}
+    for i in range(samples):
+        selection = np.concatenate((
+            rng.choice(real_idx, size=real_idx.size, replace=True),
+            rng.choice(fake_idx, size=fake_idx.size, replace=True),
+        ))
+        metrics = classification_metrics(truth[selection], scores[selection],
+                                         threshold=chosen)
+        for name in measured:
+            resampled[name][i] = metrics[name]
+    return {
+        "method": "stratified_nonparametric_bootstrap",
+        "confidence_level": 0.95,
+        "bootstrap_samples": samples,
+        "seed": seed,
+        "fixed_threshold": chosen,
+        "real_count": int(real_idx.size),
+        "fake_count": int(fake_idx.size),
+        "metrics": {
+            name: {
+                "point_estimate": estimates[name],
+                "ci95_lower": float(np.percentile(values, 2.5)),
+                "ci95_upper": float(np.percentile(values, 97.5)),
+            }
+            for name, values in resampled.items()
+        },
+        "warning": (
+            "Intervals assume independently sampled examples within each class, "
+            "so speaker/room/source correlations and dataset shift are not "
+            "accounted for. Bootstrap intervals do not validate generalization "
+            "or calibrate fake-class scores. Selecting the threshold on this "
+            "same dataset makes estimates optimistic."
+        ),
+    }
