@@ -1,0 +1,22 @@
+.reference-rir-card { margin-top: 20px; padding: 27px; border: 1px solid #293951; border-radius: 17px; background: #141e2e; }
+.reference-rir-card h2 { margin: 12px 0 8px; font-size: 20px; }
+.reference-rir-card p { color: #a3b1c9; font-size: 13px; line-height: 1.7; }
+.reference-rir-inputs { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin: 18px 0; }
+.reference-rir-input { display: flex; flex-direction: column; gap: 7px; padding: 14px; border: 1px solid #34435a; border-radius: 10px; background: #111b2b; min-width: 0; }
+.reference-rir-input strong { font-size: 13px; color: #dce8ff; }
+.reference-rir-input span, .reference-rir-input small { color: #96a8c3; font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+.reference-rir-input input { width: 100%; max-width: 100%; color: #dce8ff; font-size: 12px; }
+.reference-rir-submit { padding: 11px 16px; background: #7695ff; color: #07101f; border: 0; border-radius: 9px; font-weight: 700; cursor: pointer; }
+.reference-rir-submit:disabled { cursor: not-allowed; opacity: .5; }
+.reference-rir-submit:focus-visible, .reference-rir-input input:focus-visible { outline: 2px solid #d0dcff; outline-offset: 3px; }
+.reference-rir-error { color: #ffc4ce !important; padding: 12px; border-radius: 9px; border: 1px solid #9c5768; background: #452632; }
+.reference-rir-results { margin-top: 18px; border: 1px solid #357b71; border-radius: 10px; padding: 16px; background: #142e2d; }
+.reference-rir-results h3 { margin: 0 0 14px; font-size: 15px; }
+.reference-rir-results small { color: #c4dedb; font-size: 11px; line-height: 1.6; }
+.reference-rir-results p { color: #c4dedb; }
+.reference-rir-metrics { display: grid; grid-template-columns: repeat(auto-fit,minmax(145px,1fr)); gap: 10px; margin: 0 0 14px; }
+.reference-rir-metrics > div { padding: 11px; background: #102524; border: 1px solid #32605d; border-radius: 8px; min-width: 0; }
+.reference-rir-metrics dt { color: #aac8c3; font-size: 11px; line-height: 1.5; }
+.reference-rir-metrics dd { color: #e0fff4; font-size: 14px; font-weight: 700; margin: 5px 0 0; }
+.reference-rir-disclaimer { display: block; color: #91a3bc; font-size: 11px; line-height: 1.7; margin-top: 14px; }
+@media (max-width: 700px) { .reference-rir-card { padding: 17px; } .reference-rir-inputs { grid-template-columns: 1fr; } }
