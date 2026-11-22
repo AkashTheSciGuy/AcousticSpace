@@ -100,7 +100,7 @@ def check_endpoints(*, require_models: bool = False, check_ast: bool = False) ->
             expected_paths = {
                 "/health", "/api/audio/capabilities", "/api/audio/validate",
                 "/api/audio/inspect", "/api/audio/diagnostics",
-                "/api/rir/analyze", "/api/model/status",
+                "/api/rir/analyze", "/api/rir/reference-consistency", "/api/model/status",
                 "/api/model/predict", "/api/model/segments",
                 "/api/ast/status", "/api/ast/predict",
             }
@@ -170,6 +170,38 @@ def check_endpoints(*, require_models: bool = False, check_ast: bool = False) ->
             return {"rt60_t20_seconds": result["metrics"]["rt60_t20_seconds"]}
 
         verify("isolated_rir_analysis", rir_analysis)
+
+        def reference_aided_rir() -> dict:
+            from scipy.signal import fftconvolve
+
+            rng = np.random.default_rng(321)
+            speech = rng.normal(size=8000) * 0.05
+            ambience = rng.normal(size=8000) * 0.05
+            response = np.zeros(2000, dtype=np.float64)
+            response[0] = 0.9
+            response[500] = 0.1
+            payload = {
+                "dry_speech": wav_bytes(speech),
+                "wet_speech": wav_bytes(fftconvolve(speech, response)),
+                "dry_ambience": wav_bytes(ambience),
+                "wet_ambience": wav_bytes(fftconvolve(ambience, response)),
+            }
+            result = _expect(client.post(
+                "/api/rir/reference-consistency",
+                files={name: (name + ".wav", data, "audio/wav")
+                       for name, data in payload.items()},
+            ))
+            assert result["status"] == "analyzed"
+            assert result["prediction"] is None
+            assert len(result["features"]) == 7
+            assert all(np.isfinite(list(result["features"].values())))
+            return {
+                "features": len(result["features"]),
+                "reference_signals": 4,
+                "note": "Known isolated stems, not blind separation or deepfake detection",
+            }
+
+        verify("reference_aided_rir_comparison", reference_aided_rir)
 
         def rejection() -> dict:
             response = client.post(
