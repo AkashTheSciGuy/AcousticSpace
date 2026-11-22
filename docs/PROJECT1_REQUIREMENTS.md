@@ -30,7 +30,7 @@ This implements a structural guard **only**. The current 226-file candidate arch
 
 For repeatable local processing-time instrumentation, see [API latency benchmark](LATENCY_BENCHMARK.md). Actual target-machine measurements are still required.
 
-A later RTX 3050 partial-AST experiment updated the last encoder layer, achieved 91.43% validation accuracy (87.25% balanced accuracy) and retained its checkpoint as `backend/models/ast_partial_top1_v1`. This is a **validation result**, not an independent generalization claim. See `backend/AST_EVALUATION.md` for the epoch results and precise provenance.
+A later RTX 3050 partial-AST experiment updated the last encoder layer, achieved 91.43% validation accuracy (87.25% balanced accuracy) and retained its checkpoint as `backend/models/ast_partial_top1_v1`. A separate read-only evaluation successfully reloaded that checkpoint, reproduced its validation confusion matrix and reported ROC-AUC **0.9215** (500-sample stratified bootstrap 95% interval **0.8539–0.9728**). This is a **within-dataset validation result**, not an independent generalization claim. See `backend/AST_EVALUATION.md` for the recorded outcome and [external AST evaluation](AST_EXTERNAL_VALIDATION.md) for the frozen-checkpoint independent-corpus workflow.
 
 ## Experimental baseline results (user-supplied local run)
 
