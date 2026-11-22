@@ -17,7 +17,7 @@ Basis: user-provided `PROJECT(1).pdf`, Project 1 on pages 1–2. This document d
 | Dashboard state/history | `analysisHistory.ts`, `HistoryPanel.tsx` | Session-only metadata; no backend audit log |
 | Docker containerization | `backend/Dockerfile`, `frontend/Dockerfile`, `compose.yaml` | Built successfully in CI; live local Docker demo not yet verified |
 | CI/CD | `.github/workflows/ci.yml` | Backend pytest + frontend build/lint + Compose build |
-| Low-latency API | Upload bounds and batched window scores; no comprehensive latency benchmark | **Not benchmarked** |
+| Low-latency API | User-reported 20-sample Windows in-process route timing; repeatable sequential and concurrent ASGI benchmark scripts | **Measured locally for generated one-second inputs; network/production SLO not verified** |
 | Final physics-based deepfake detection | Standalone RIR metrics + speech classification are separate systems | **Not verified** |
 
 ## Research dataset provenance safeguards
