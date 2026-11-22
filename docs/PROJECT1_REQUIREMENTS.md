@@ -11,14 +11,16 @@ Basis: user-provided `PROJECT(1).pdf`, Project 1 on pages 1–2. This document d
 | Baseline CNN/Transformer | Three-/six-feature logistic regression baselines; locally reported one-epoch AST head-only experiment | Baselines evaluated; head-only AST result is not a validated CNN/fine-tuned Transformer |
 | Mid-review voice/background separation | Not demonstrated; mixed mono speech does not identify a unique blind room response | **Not achieved** |
 | Fine-tune Hugging Face AST | `scripts/train_ast.py`, optional dependencies, `/api/ast/status` and `/api/ast/predict`; local v1 head-only run documented in `backend/AST_EVALUATION.md` | Partial: 47.14% validation accuracy from reported head-only run; full encoder fine-tuning and independent test **not verified** |
-| Check breathing cadence versus syllables | Energy peaks and noisy quiet intervals `speech_diagnostics.py` | Exploration only; **not validated breath/syllable alignment** |
-| Suspicious segments in results UI | `segment_analysis.py`, `SegmentReview.tsx`, overlapping classifier windows | Functional exploratory scores; **not validated tamper localization** |
+| Check breathing cadence versus syllables | Exploratory energy peaks/noisy quiet intervals; `scripts/evaluate_annotations.py` measures their agreement with separately supplied event labels | Instrumented; **independent breath/syllable validation still missing** |
+| Suspicious segments in results UI | `segment_analysis.py`, `SegmentReview.tsx`, overlapping classifier windows; optional annotated time-IoU evaluation | Functional exploratory scores; **independent tamper localization validation still missing** |
 | Prediction display | `BaselineClassifier.tsx` + `AcousticComparison.tsx` | Implemented; values are uncalibrated classifier scores |
 | Dashboard state/history | `analysisHistory.ts`, `HistoryPanel.tsx` | Session-only metadata; no backend audit log |
 | Docker containerization | `backend/Dockerfile`, `frontend/Dockerfile`, `compose.yaml` | Built successfully in CI; live local Docker demo not yet verified |
 | CI/CD | `.github/workflows/ci.yml` | Backend pytest + frontend build/lint + Compose build |
 | Low-latency API | User-reported 20-sample Windows in-process route timing; repeatable sequential and concurrent ASGI benchmark scripts | **Measured locally for generated one-second inputs; network/production SLO not verified** |
 | Final physics-based deepfake detection | Standalone RIR metrics + speech classification are separate systems | **Not verified** |
+
+See [Independent annotation evaluation](ANNOTATED_VALIDATION.md) for a fail-closed local breath/syllable and tamper-window scoring workflow using real independently annotated WAV/MP3 files; no ground-truth recording labels have been supplied or fabricated.
 
 ## Research dataset provenance safeguards
 
