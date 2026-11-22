@@ -56,8 +56,8 @@ def _read_csv(path: Path, *, name: str):
         rows = csv.DictReader(stream)
         if not REQUIRED_COLUMNS.issubset(rows.fieldnames or []) and name == "external":
             raise ValueError("External CSV requires path,label,sha256,group,source_reference.")
-        if name == "training" and not {"sha256", "label"}.issubset(rows.fieldnames or []):
-            raise ValueError("Training manifest requires sha256 and label.")
+        if name == "training" and not {"sha256", "label", "group"}.issubset(rows.fieldnames or []):
+            raise ValueError("Training manifest requires sha256, label and group.")
         for index, row in enumerate(rows, 2):
             if index > MAX_ROWS + 1:
                 raise ValueError(f"{name} manifest has more than {MAX_ROWS} records.")
@@ -91,11 +91,16 @@ def load_external_records(root: Path, external_manifest: Path, training_manifest
     if not root.is_dir():
         raise ValueError("External dataset root does not exist.")
     reference_hashes = set()
+    reference_groups = set()
     for line, row in _read_csv(training_manifest, name="training"):
         digest = _hash_value(row.get("sha256"), line=line)
         if row.get("label") not in ALLOWED_LABELS:
             raise ValueError(f"Training manifest label invalid on line {line}.")
+        group = (row.get("group") or "").strip()
+        if group.lower() in BLANKS:
+            raise ValueError(f"Training manifest group invalid on line {line}.")
         reference_hashes.add(digest)
+        reference_groups.add(group)
     if not reference_hashes:
         raise ValueError("Original training manifest has no SHA-256 records.")
 
@@ -113,6 +118,8 @@ def load_external_records(root: Path, external_manifest: Path, training_manifest
             raise ValueError(f"Line {line}: label must be real or fake.")
         if group.lower() in BLANKS or source.lower() in BLANKS:
             raise ValueError(f"Line {line}: real source group and provenance are required.")
+        if group in reference_groups:
+            raise ValueError(f"Line {line}: declared source group overlaps the original training/dev/test manifest.")
         path = _relative_audio(root, row.get("path"))
         expected = _hash_value(row.get("sha256"), line=line)
         if path in seen_paths or expected in seen_hashes:
@@ -139,6 +146,7 @@ def load_external_records(root: Path, external_manifest: Path, training_manifest
         "external_manifest_sha256": _file_hash(Path(external_manifest)),
         "original_manifest_sha256": _file_hash(Path(training_manifest)),
         "exact_audio_hash_overlap": 0,
+        "declared_source_group_overlap": 0,
     }
 
 
