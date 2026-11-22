@@ -1,4 +1,5 @@
 """Bounded speech diagnostic endpoint: no authenticity verdict."""
+import asyncio
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Annotated
@@ -10,6 +11,11 @@ from app.preprocessing import load_audio
 from app.speech_diagnostics import analyze_speech_diagnostics
 
 router = APIRouter(prefix="/api/audio", tags=["audio"])
+
+
+def _diagnose_recording(path: Path) -> dict:
+    """Keep Librosa spectrogram calculations off the ASGI event loop."""
+    return analyze_speech_diagnostics(load_audio(path))
 
 
 @router.post("/diagnostics")
@@ -40,9 +46,8 @@ async def diagnostics(
                     raise HTTPException(413, "Audio exceeds 20 MiB.")
                 temp.write(block)
         try:
-            audio = load_audio(path)
-            return {"status": "analyzed", "filename": filename,
-                    **analyze_speech_diagnostics(audio)}
+            metrics = await asyncio.to_thread(_diagnose_recording, path)
+            return {"status": "analyzed", "filename": filename, **metrics}
         except (ValueError, OSError, RuntimeError) as exc:
             raise HTTPException(422, f"Audio diagnostics failed: {exc}") from exc
     finally:
