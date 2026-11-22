@@ -1,5 +1,7 @@
 """Bounded audio inspection endpoint; returns measurements, not AI predictions."""
 
+import asyncio
+
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Annotated
@@ -12,6 +14,12 @@ from app.preprocessing import load_audio
 from app.speech_acoustics import extract_speech_acoustics
 
 router = APIRouter(prefix="/api/audio", tags=["audio"])
+
+
+def _analyze_recording(path: Path):
+    """Run decoding and signal features away from the ASGI event loop."""
+    audio = load_audio(path)
+    return extract_features(audio), extract_speech_acoustics(audio)
 
 
 @router.post("/inspect")
@@ -46,9 +54,7 @@ async def inspect_audio(
                 temp.write(chunk)
 
         try:
-            audio = load_audio(temporary_path)
-            features = extract_features(audio)
-            speech_acoustics = extract_speech_acoustics(audio)
+            features, speech_acoustics = await asyncio.to_thread(_analyze_recording, temporary_path)
         except (ValueError, OSError, RuntimeError) as exc:
             raise HTTPException(422, f"Audio could not be inspected: {exc}") from exc
 

@@ -1,4 +1,5 @@
 """Dedicated RIR upload endpoint. Ordinary speech is NOT a valid RIR input."""
+import asyncio
 
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -11,6 +12,12 @@ from app.preprocessing import load_audio
 from app.rir_analysis import analyze_rir
 
 router = APIRouter(prefix="/api/rir", tags=["rir"])
+
+
+def _measure_rir(path: Path):
+    """Decode and estimate room metrics without blocking the API event loop."""
+    audio = load_audio(path)
+    return analyze_rir(audio.samples, audio.sample_rate)
 
 
 @router.post("/analyze")
@@ -39,8 +46,7 @@ async def analyze_uploaded_rir(
                     raise HTTPException(413, "RIR file exceeds the 20 MiB limit.")
                 temp.write(chunk)
         try:
-            audio = load_audio(path)
-            metrics = analyze_rir(audio.samples, audio.sample_rate)
+            metrics = await asyncio.to_thread(_measure_rir, path)
         except (ValueError, OSError, RuntimeError) as exc:
             raise HTTPException(422, f"RIR could not be analyzed: {exc}") from exc
         return {
