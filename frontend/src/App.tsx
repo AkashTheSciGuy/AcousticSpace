@@ -1,5 +1,6 @@
 import AudioUpload from './components/AudioUpload'
 import RirAnalyzer from './components/RirAnalyzer'
+import ReferenceRirComparison from './components/ReferenceRirComparison'
 import BaselineClassifier from './components/BaselineClassifier'
 import AcousticComparison from './components/AcousticComparison'
 import AstClassifier from './components/AstClassifier'
@@ -52,6 +53,7 @@ function App() {
         </section>
         <AudioUpload />
         <RirAnalyzer />
+        <ReferenceRirComparison />
         <BaselineClassifier />
         <AcousticComparison />
         <AstClassifier />
