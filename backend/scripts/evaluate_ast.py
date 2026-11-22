@@ -38,7 +38,12 @@ def reported_training_mode(checkpoint: Path) -> str:
         return "unknown"
     if not isinstance(metadata, dict) or type(metadata.get("full_finetune")) is not bool:
         return "unknown"
-    return "full_encoder_finetune" if metadata["full_finetune"] else "head_only"
+    layers = metadata.get("train_last_layers", 0)
+    if type(layers) is not int or layers < 0:
+        return "unknown"
+    if metadata["full_finetune"]:
+        return "full_encoder_finetune" if layers == 0 else "unknown"
+    return "partial_encoder_finetune" if layers else "head_only"
 
 
 def evaluate_checkpoint(dataset_root, manifest, checkpoint, *, split="val",
