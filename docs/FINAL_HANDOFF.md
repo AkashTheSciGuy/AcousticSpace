@@ -1,6 +1,6 @@
 # AcousticSpace — Final demo and submission handoff
 
-**Delivery:** Local B.Sc. Computer Science audio-forensics research prototype  
+**Delivery:** Internship Project 1 — local audio-forensics research prototype  
 **Date:** 22 November 2026
 
 The application is an educational research prototype. It does **not** establish forensic-grade deepfake detection, blind room response recovery from arbitrary speech, authentic breathing/syllable alignment, or validated tamper localization.
@@ -102,16 +102,16 @@ The local RIR archive contained 226 decodable PCM-16, 16-kHz candidate files. A 
 
 ## Scope/acceptance decision
 
-The **software deliverable** is complete for a B.Sc. research demo when the verification command passes and the dashboard/API operate as documented. If classifier-backed predictions are part of the live demonstration, strict verification must pass on the actual machine.
+The **software engineering prototype** is demonstrable for the internship once the verification command passes and the dashboard/API operate as documented. Acceptance against the full original internship specification still requires real scientific evaluation evidence and mentor review. If classifier-backed predictions are part of the live demonstration, strict verification must pass on the actual machine.
 
 The **original full research goal** remains scientifically unproven: it would require validated separation and independent acoustic-response estimation from a mixed speech recording, fully evaluated transformer training, independently labeled breathing/phonetics, real tamper-localization ground truth, and a genuinely new held-out room dataset.
 
 A single mono speech mixture does not uniquely reveal dry voice, noise, and their separate transfer responses without additional physical constraints. No small code patch can create those missing measurements.
 
-See docs/PROJECT1_REQUIREMENTS.md, docs/RIR_PHASE2C_REPRODUCIBILITY.md, backend/AST_EVALUATION.md and GitHub issue #41 for evidence and remaining research requirements.
+See docs/PROJECT1_REQUIREMENTS.md, docs/ANNOTATED_VALIDATION.md, docs/RIR_PHASE2C_REPRODUCIBILITY.md, backend/AST_EVALUATION.md and GitHub issue #41 for evidence and remaining research requirements.
 
 ## Submission checklist
 
 Submit source, tests, README, this handoff and relevant research reports. Save local CI/acceptance output and genuine demo screenshots for the presentation. Do **not** commit downloaded audio archives, private recordings, local models, backend/models, backend/datasets, virtual environments or node_modules. Never represent generated fixture audio as evidence of real-world deepfake accuracy.
 
-**Final deliverable description:** a reproducible, operational, transparently limited audio-forensics research prototype, not a validated production physics-based deepfake detector.
+**Current internship delivery status:** a reproducible, operational, transparently limited audio-forensics research prototype. The specification's blind-RIR deepfake detection and independent breath/tamper/AST evaluations remain open; do not call the full research objective completed without evidence and mentor acceptance.

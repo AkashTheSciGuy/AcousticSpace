@@ -83,7 +83,9 @@ See [docs/DOCKER.md](docs/DOCKER.md). The demo uses Docker Compose with a read-o
 
 ## What remains unverified or unfinished
 
-The original PDF calls for a **fine-tuned** AST model, physics-based RIR extraction from speech, true syllable/breath alignment, validated suspicious-segment localization, robust independent accuracy and deployment readiness. A one-epoch, **head-only** AST training run was reported locally (47.14% validation accuracy on 140 clips), but end-to-end encoder fine-tuning and independent accuracy have not been established. The spectrogram, timing peaks and window scores are observational/experimental rather than validated physical or forensic inference. The RIR analyzer remains separate and requires a measured or simulated impulse response. Public production hardening, latency benchmarking and external-dataset evaluation remain research/engineering work.
+The original PDF calls for a **fine-tuned** AST model, physics-based RIR extraction from speech, true syllable/breath alignment, validated suspicious-segment localization, robust independent accuracy and deployment readiness. A one-epoch, **head-only** AST training run was reported locally (47.14% validation accuracy on 140 clips), but end-to-end encoder fine-tuning and independent accuracy have not been established. The spectrogram, timing peaks and window scores are observational/experimental rather than validated physical or forensic inference. The RIR analyzer remains separate and requires a measured or simulated impulse response. Public production hardening and external-dataset evaluation remain research/engineering work. Windows in-process timing and concurrency measurements were recorded, but networked production performance is not established.
+
+For actual annotated breath/syllable and tamper-window evaluation, see [Independent annotation validation](docs/ANNOTATED_VALIDATION.md). No independently verified breath/tamper recordings have been provided; the evaluation tooling does not fabricate labels.
 
 See [Project 1 requirements checklist](docs/PROJECT1_REQUIREMENTS.md) and [AST training instructions](backend/AST_TRAINING.md) for exact coverage.
 
