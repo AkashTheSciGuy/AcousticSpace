@@ -47,11 +47,13 @@ def test_audio_processing_uses_worker_threads(
         monkeypatch.setattr(module, "model_status", installed)
         # These are plumbing assertions; full trained-artifact HTTP inference
         # is covered by the separate prediction/segment API test modules.
-        monkeypatch.setattr(
-            module,
-            analysis_func,
-            lambda _path, _variant: {"status": "predicted" if module is prediction_api else "scored"},
-        )
+        def fake_analysis(_path, _variant):
+            return {"status": "predicted" if module is prediction_api else "scored"}
+
+        # Preserve the function identifier so the dispatch tracer can assert
+        # the exact worker callable instead of reporting '<lambda>'.
+        fake_analysis.__name__ = analysis_func
+        monkeypatch.setattr(module, analysis_func, fake_analysis)
 
     audio = _rir_fixture() if module is rir_api else _speech_fixture()
     with TestClient(app) as client:
