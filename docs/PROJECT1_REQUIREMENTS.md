@@ -20,6 +20,14 @@ Basis: user-provided `PROJECT(1).pdf`, Project 1 on pages 1–2. This document d
 | Low-latency API | Upload bounds and batched window scores; no comprehensive latency benchmark | **Not benchmarked** |
 | Final physics-based deepfake detection | Standalone RIR metrics + speech classification are separate systems | **Not verified** |
 
+## Research dataset provenance safeguards
+
+The new `scripts/validate_rir_provenance.py` checks a **manually curated** physical-room and recording-session manifest for split leakage, duplicate WAV hashes, microphone/source-position diversity and format integrity. See [RIR provenance validation](RIR_PROVENANCE_VALIDATION.md) and the header-only CSV template.
+
+This implements a structural guard **only**. The current 226-file candidate archive has **not** passed independent human physical-room verification, and no new held-out accuracy or real deepfake results are available.
+
+For repeatable local processing-time instrumentation, see [API latency benchmark](LATENCY_BENCHMARK.md). Actual target-machine measurements are still required.
+
 ## Experimental baseline results (user-supplied local run)
 
 Dataset: ASVspoof 2019 LA subset; 400 train, 140 validation, 160 test. The original evaluation partition was not used.
