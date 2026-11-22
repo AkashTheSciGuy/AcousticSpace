@@ -1,4 +1,5 @@
 """Bounded experimental audio-window classification API."""
+import asyncio
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Annotated, Literal
@@ -14,6 +15,11 @@ router = APIRouter(prefix="/api/model", tags=["experimental-model"])
 Variant = Literal["baseline", "acoustic"]
 
 
+def _score_recording(path: Path, variant: Variant) -> dict:
+    """Decode and score windows in a worker; leave the ASGI loop responsive."""
+    return score_segments(load_audio(path), variant=variant)
+
+
 @router.post("/segments")
 async def predict_segments(
     file: Annotated[UploadFile, File(description="WAV/MP3, max 20 MiB and 60 seconds")],
@@ -22,7 +28,7 @@ async def predict_segments(
     """Window scores only; never claim reliable anomaly localization."""
     temp_path: Path | None = None
     try:
-        state = model_status(variant)
+        state = await asyncio.to_thread(model_status, variant)
         if not state["available"]:
             raise HTTPException(status_code=503, detail=state["message"])
         filename = (file.filename or "").replace("\\", "/").rsplit("/", 1)[-1]
@@ -46,8 +52,7 @@ async def predict_segments(
                     raise HTTPException(status_code=413, detail="Audio exceeds the 20 MiB limit.")
                 temp.write(chunk)
         try:
-            audio = load_audio(temp_path)
-            result = score_segments(audio, variant=variant)
+            result = await asyncio.to_thread(_score_recording, temp_path, variant)
         except ModelUnavailableError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         except (ValueError, OSError, RuntimeError) as exc:
